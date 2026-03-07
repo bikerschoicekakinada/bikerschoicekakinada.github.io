@@ -1,0 +1,1 @@
+<div className='flex items-center'>\n  <img src='/path/to/logo.png' className='w-32 h-32 md:w-44 md:h-44' alt='Logo' />\n</div>
