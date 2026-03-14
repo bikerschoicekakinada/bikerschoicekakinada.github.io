@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin
 
-Sitemap: https://bikerschoicekakinada.com/sitemap.xml
+Sitemap: https://bikerschoicekakinada.vercel.app/sitemap.xml
