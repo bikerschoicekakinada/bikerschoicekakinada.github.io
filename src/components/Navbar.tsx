@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 const sections = [
   { id: "home", label: "Home" },
@@ -14,6 +15,8 @@ const sections = [
 
 const Navbar = () => {
   const [active, setActive] = useState("home");
+  const location = useLocation();
+  const isHomeRoute = location.pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,7 +40,7 @@ const Navbar = () => {
           {sections.map((s) => (
             <a
               key={s.id}
-              href={`#${s.id}`}
+              href={isHomeRoute ? `#${s.id}` : `/#${s.id}`}
               className={`relative px-3 py-1.5 text-xs font-heading font-semibold rounded-full transition-colors whitespace-nowrap ${
                 active === s.id
                   ? "text-primary-foreground"

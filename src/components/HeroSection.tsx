@@ -19,7 +19,7 @@ const HeroSection = () => {
         className="relative z-10 flex flex-col items-center text-center">
 
         {/* Logo */}
-        <div className="w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden border-2 border-primary neon-border-cyan mb-6">
+        <div className="w-32 h-32 md:w-44 md:h-44 rounded-full overflow-hidden border-2 border-primary neon-border-cyan mb-6">
           <img src={logo} alt="Bikers Choice Kakinada Logo" className="w-full h-full object-cover" />
         </div>
 
@@ -57,7 +57,11 @@ const HeroSection = () => {
           className="inline-flex items-center gap-2 bg-surface border px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-primary transition-colors mb-4 shadow font-semibold border-primary">
 
           <Instagram size={14} className="text-primary" />
-          Follow us on Instagram – <InstagramCounter /> riders
+          Follow us on Instagram –{" "}
+          <span className="font-medium text-primary">
+            <InstagramCounter />
+          </span>{" "}
+          riders
         </a>
 
         {/* Location */}
@@ -73,7 +77,7 @@ const HeroSection = () => {
       {settings.online_delivery_button_enabled && (
         <a
           href="#delivery"
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-2.5 px-4 rounded-full text-xs shadow-lg neon-border-cyan animate-pulse-neon hover:scale-110 transition-transform">
+          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-2.5 px-4 rounded-full text-sm shadow-lg neon-border-cyan animate-pulse-neon hover:scale-110 transition-transform">
 
           <Truck size={16} /> Online Delivery
         </a>

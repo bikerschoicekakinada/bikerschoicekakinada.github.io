@@ -19,7 +19,13 @@ const SocialSection = () => {
           Follow Our Build Journey
         </h2>
         <p className="text-muted-foreground text-sm mb-2">Daily custom work & updates</p>
-        <p className="text-muted-foreground text-sm mb-8">Join <InstagramCounter /> riders</p>
+        <p className="text-muted-foreground text-sm mb-8">
+          Join{" "}
+          <span className="font-medium text-primary">
+            <InstagramCounter />
+          </span>{" "}
+          riders
+        </p>
 
         <div className="flex flex-col gap-3">
           <a
