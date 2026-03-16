@@ -193,7 +193,7 @@ const AdminGallery = () => {
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((item) => (
             <div key={item.id} className="relative rounded-lg overflow-hidden border border-border">
-              <img src={item.image_url} alt="" className="w-full h-32 object-cover" />
+              <img src={item.image_url} alt="Motorcycle modification gallery image" className="w-full h-32 object-cover" />
               <button
                 onClick={() => handleDelete(item.id)}
                 className="absolute top-1 right-1 bg-background/80 p-1 rounded-full text-secondary hover:text-foreground"

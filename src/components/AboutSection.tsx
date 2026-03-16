@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { CheckCircle } from "lucide-react";
+import InstagramCounter from "./InstagramCounter";
 
 const bullets = [
   "Premium finishing",
@@ -24,8 +25,12 @@ const AboutSection = () => {
         </h2>
         <p className="text-sm text-muted-foreground text-center mb-8 leading-relaxed">
           Bikers Choice Kakinada delivers premium custom builds, LED mods, wraps, paint jobs, and
-          performance upgrades. With 4+ years of experience and a 4.8k Instagram community, we focus
-          on aggressive street-bike styling and high-end finishing.
+          performance upgrades. With 4+ years of experience and a{" "}
+          <span className="font-medium text-primary">
+            <InstagramCounter />
+          </span>{" "}
+          rider Instagram community, we focus on aggressive street-bike styling and high-end
+          finishing.
         </p>
         <div className="grid grid-cols-2 gap-3">
           {bullets.map((b, i) => (
