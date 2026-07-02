@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/instagram-followers?refresh=true",
-      "schedule": "0 */12 * * *"
-    }
-  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]
