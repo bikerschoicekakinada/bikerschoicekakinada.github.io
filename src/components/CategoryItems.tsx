@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import WhatsAppButton from "./WhatsAppButton";
+import HighlightText from "./HighlightText";
 import type { DeliveryItem } from "@/hooks/useDeliveryItems";
 
 interface CategoryItemsProps {
@@ -8,9 +9,10 @@ interface CategoryItemsProps {
   categoryName: string;
   loading: boolean;
   onBack: () => void;
+  highlightText?: string;
 }
 
-const CategoryItems = ({ items, categoryName, loading, onBack }: CategoryItemsProps) => {
+const CategoryItems = ({ items, categoryName, loading, onBack, highlightText = "" }: CategoryItemsProps) => {
   return (
     <div className="max-w-5xl mx-auto">
       <button
@@ -51,7 +53,9 @@ const CategoryItems = ({ items, categoryName, loading, onBack }: CategoryItemsPr
             />
             <div className="p-3 space-y-2">
               {item.label && (
-                <p className="text-sm font-heading font-semibold truncate">{item.label}</p>
+                <p className="text-sm font-heading font-semibold truncate">
+                  <HighlightText text={item.label} highlight={highlightText} />
+                </p>
               )}
               <WhatsAppButton imageUrl={item.image_url} className="w-full" />
             </div>

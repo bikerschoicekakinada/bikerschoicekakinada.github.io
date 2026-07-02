@@ -15,12 +15,13 @@ const AdminLogin = () => {
     }
   }, [navigate]);
 
-  const handleLogin = (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!email.trim() || !password.trim()) return;
 
-    if (adminLogin(email, password)) {
+    const success = await adminLogin(email, password);
+    if (success) {
       toast.success("Welcome, Admin!");
       navigate("/admin/dashboard");
     } else {

@@ -9,6 +9,9 @@ const AdminSettings = () => {
     id: "",
     hero_subtitle: DEFAULT_SETTINGS.hero_subtitle,
     instagram_followers: DEFAULT_SETTINGS.instagram_followers,
+    instagram_followers_live_count: 0,
+    instagram_followers_last_sync: "",
+    instagram_followers_status: "manual",
     map_embed: DEFAULT_SETTINGS.map_embed,
     working_hours: DEFAULT_SETTINGS.working_hours,
     instagram_link: DEFAULT_SETTINGS.instagram_link,
@@ -33,6 +36,9 @@ const AdminSettings = () => {
             id: data.id,
             hero_subtitle: data.hero_subtitle || DEFAULT_SETTINGS.hero_subtitle,
             instagram_followers: data.instagram_followers || DEFAULT_SETTINGS.instagram_followers,
+            instagram_followers_live_count: data.instagram_followers_live_count || 0,
+            instagram_followers_last_sync: data.instagram_followers_last_sync || "",
+            instagram_followers_status: data.instagram_followers_status || "manual",
             map_embed: data.map_embed || DEFAULT_SETTINGS.map_embed,
             working_hours: data.working_hours || DEFAULT_SETTINGS.working_hours,
             instagram_link: data.instagram_link || DEFAULT_SETTINGS.instagram_link,
@@ -60,7 +66,7 @@ const AdminSettings = () => {
     };
     fetchSettings();
 
-    // Listen for real-time updates to settings (e.g. from scheduled auto-update)
+    // Listen for real-time updates to settings
     const channel = supabase
       .channel("admin-settings-live")
       .on(
@@ -72,6 +78,9 @@ const AdminSettings = () => {
             setSettings((prev) => ({
               ...prev,
               instagram_followers: d.instagram_followers || prev.instagram_followers,
+              instagram_followers_live_count: d.instagram_followers_live_count !== undefined ? d.instagram_followers_live_count : prev.instagram_followers_live_count,
+              instagram_followers_last_sync: d.instagram_followers_last_sync || prev.instagram_followers_last_sync,
+              instagram_followers_status: d.instagram_followers_status || prev.instagram_followers_status,
             }));
             if (d.updated_at) {
               setLastUpdated(new Date(d.updated_at).toLocaleString());
@@ -87,12 +96,19 @@ const AdminSettings = () => {
   const handleRefreshFollowers = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch("/.netlify/functions/instagram-followers");
+      const res = await fetch("/api/instagram-followers?refresh=true");
       if (res.ok) {
         const data = await res.json();
         if (data.count && data.count > 0 && data.source !== "default" && data.source !== "error") {
           const formatted = data.count.toLocaleString("en-IN");
-          setSettings((prev) => ({ ...prev, instagram_followers: formatted }));
+          const formattedWithPlus = formatted + "+";
+          setSettings((prev) => ({
+            ...prev,
+            instagram_followers: formattedWithPlus,
+            instagram_followers_live_count: data.count,
+            instagram_followers_last_sync: data.lastSync || new Date().toISOString(),
+            instagram_followers_status: data.source === "live" ? "live" : data.source === "cache" ? "cached" : "manual",
+          }));
           toast.success(`Fetched live count: ${formatted} (source: ${data.source})`);
         } else {
           toast.info(`Could not get live count (source: ${data.source}). Current value kept.`);
@@ -140,7 +156,6 @@ const AdminSettings = () => {
       if (settings.id) {
         ({ error } = await supabase.from("site_settings").update(payload).eq("id", settings.id));
       } else {
-        // No existing row — insert a new one
         const result = await supabase.from("site_settings").insert(payload).select().single();
         error = result.error;
         if (!error && result.data) {
@@ -189,12 +204,12 @@ const AdminSettings = () => {
       <h2 className="font-heading font-bold text-base">Site Settings</h2>
       {field("Hero Subtitle", "hero_subtitle", true)}
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground font-heading">Instagram Followers</label>
+        <label className="text-xs text-muted-foreground font-heading">Instagram Followers (Manual Fallback)</label>
         <div className="flex gap-2">
           <input
             type="text"
             value={settings.instagram_followers}
-            onChange={(e) => setSettings({ ...settings, instagram_followers: e.target.value })}
+            onChange={(e) => setSettings({ ...settings, instagram_followers: e.target.value, instagram_followers_status: "manual" })}
             className="flex-1 bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
@@ -207,11 +222,32 @@ const AdminSettings = () => {
             {refreshing ? "Fetching..." : "Live Fetch"}
           </button>
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] text-muted-foreground">Auto-updates every 2 hours</span>
-          {lastUpdated && (
-            <span className="text-[10px] text-muted-foreground">· Last updated: {lastUpdated}</span>
+
+        {/* Live Followers status indicator */}
+        <div className="flex flex-col gap-2 mt-2 bg-card border border-border p-3 rounded-lg">
+          <p className="text-[10px] text-muted-foreground font-heading font-bold uppercase tracking-wider">Instagram Status</p>
+          <div className="flex items-center gap-2">
+            {settings.instagram_followers_status === "live" ? (
+              <>
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-heading font-semibold text-foreground">🟢 Live Count Active ({settings.instagram_followers_live_count?.toLocaleString("en-IN") || 0})</span>
+              </>
+            ) : settings.instagram_followers_status === "cached" ? (
+              <>
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                <span className="text-xs font-heading font-semibold text-foreground">🟡 Cached Live Count ({settings.instagram_followers_live_count?.toLocaleString("en-IN") || 0})</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span className="text-xs font-heading font-semibold text-foreground">🔴 Manual Count Active ({settings.instagram_followers})</span>
+              </>
+            )}
+          </div>
+          {settings.instagram_followers_last_sync && (
+            <p className="text-[9px] text-muted-foreground font-heading">
+              Last Successful Sync: {new Date(settings.instagram_followers_last_sync).toLocaleString()}
+            </p>
           )}
         </div>
       </div>

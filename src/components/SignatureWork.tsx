@@ -2,13 +2,28 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import SwipeGallery from "./SwipeGallery";
+import BeforeAfterImage from "./BeforeAfterImage";
 import { DEFAULT_SIGNATURE_WORK } from "@/lib/mediaDefaults";
+import { useMediaViewer, MediaItem } from "@/hooks/useMediaViewer";
 
-type WorkItem = { id: string; image_url: string; label: string; order_index: number };
+type WorkItem = {
+  id: string;
+  image_url: string;
+  label: string;
+  order_index: number;
+  before_image_url: string | null;
+  before_image_alt: string | null;
+  after_image_alt: string | null;
+  before_label: string | null;
+  after_label: string | null;
+  comparison_enabled: boolean;
+  instagram_post_url: string | null;
+};
 
 const SignatureWork = () => {
   const [dbWorks, setDbWorks] = useState<WorkItem[]>([]);
   const [hasDb, setHasDb] = useState(false);
+  const { open } = useMediaViewer();
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
@@ -19,7 +34,19 @@ const SignatureWork = () => {
       try {
         const { data, error } = await supabase.from("signature_work").select("*").order("order_index");
         if (!error && active) {
-          const mapped = (data || []) as WorkItem[];
+          const mapped: WorkItem[] = (data || []).map((d) => ({
+            id: d.id,
+            image_url: d.image_url,
+            label: d.label,
+            order_index: d.order_index,
+            before_image_url: d.before_image_url ?? null,
+            before_image_alt: d.before_image_alt ?? null,
+            after_image_alt: d.after_image_alt ?? null,
+            before_label: d.before_label ?? null,
+            after_label: d.after_label ?? null,
+            comparison_enabled: d.comparison_enabled ?? false,
+            instagram_post_url: d.instagram_post_url ?? null,
+          }));
           setDbWorks(mapped);
           setHasDb((prev) => (mapped.length > 0 ? true : prev));
         }
@@ -47,7 +74,38 @@ const SignatureWork = () => {
     };
   }, []);
 
-  const works = hasDb ? dbWorks : DEFAULT_SIGNATURE_WORK;
+  // Default items with empty comparison fields
+  const defaultWorks: WorkItem[] = DEFAULT_SIGNATURE_WORK.map((w, i) => ({
+    id: `default-${i}`,
+    image_url: w.image_url,
+    label: w.label,
+    order_index: w.order_index,
+    before_image_url: null,
+    before_image_alt: null,
+    after_image_alt: null,
+    before_label: null,
+    after_label: null,
+    comparison_enabled: false,
+    instagram_post_url: null,
+  }));
+
+  const works = hasDb ? dbWorks : defaultWorks;
+
+  const handleWorkClick = (clickedIndex: number) => {
+    const mediaItems: MediaItem[] = works.map((w) => ({
+      src: w.image_url,
+      alt: w.label,
+      instagramUrl: w.instagram_post_url,
+      label: w.label,
+      beforeSrc: w.before_image_url,
+      beforeAlt: w.before_image_alt,
+      afterAlt: w.after_image_alt,
+      beforeLabel: w.before_label,
+      afterLabel: w.after_label,
+      comparisonEnabled: w.comparison_enabled,
+    }));
+    open(mediaItems, clickedIndex);
+  };
 
   return (
     <section id="signature" className="py-16 px-4">
@@ -60,24 +118,56 @@ const SignatureWork = () => {
         <h2 className="text-xl md:text-3xl font-display font-bold text-center mb-2 neon-glow-red">
           Our Signature Custom Work
         </h2>
-        <p className="text-center text-muted-foreground text-sm mb-8">Swipe to explore our builds</p>
+        <p className="text-center text-muted-foreground text-sm mb-8">Swipe or tap to explore our builds</p>
       </motion.div>
 
       <SwipeGallery
         images={works.map((w) => w.image_url)}
-        renderSlide={(image, index) => (
-          <div className="relative rounded-xl overflow-hidden border border-border neon-border-cyan group">
-            <img
-              src={image}
-              alt={works[index].label}
-              className="w-full aspect-[4/5] object-cover transition-transform duration-500 group-hover:scale-110"
-              loading="lazy"
-            />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/80 to-transparent p-4">
-              <span className="font-heading font-semibold text-sm text-primary">{works[index].label}</span>
+        renderSlide={(image, index) => {
+          const work = works[index];
+          const isComparison = work?.comparison_enabled && !!work?.before_image_url;
+
+          if (isComparison) {
+            return (
+              <div
+                className="relative rounded-xl overflow-hidden border border-border neon-border-cyan group cursor-pointer"
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest(".ba-handle")) return;
+                  handleWorkClick(index);
+                }}
+              >
+                <BeforeAfterImage
+                  beforeSrc={work.before_image_url!}
+                  afterSrc={image}
+                  beforeAlt={work.before_image_alt || `${work.label} - before`}
+                  afterAlt={work.after_image_alt || work.label}
+                  beforeLabel={work.before_label || "Before"}
+                  afterLabel={work.after_label || "After"}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/80 to-transparent p-4 pointer-events-none">
+                  <span className="font-heading font-semibold text-sm text-primary">{work.label}</span>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              className="relative rounded-xl overflow-hidden border border-border neon-border-cyan group cursor-pointer"
+              onClick={() => handleWorkClick(index)}
+            >
+              <img
+                src={image}
+                alt={work?.label || "Signature work"}
+                className="w-full aspect-[4/5] object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/80 to-transparent p-4">
+                <span className="font-heading font-semibold text-sm text-primary">{work?.label}</span>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        }}
       />
     </section>
   );

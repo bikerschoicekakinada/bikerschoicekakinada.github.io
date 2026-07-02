@@ -1,0 +1,109 @@
+/* BeforeAfterImage – slider styling */
+
+.ba-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: 0.75rem;
+}
+
+.ba-container img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* After image sits behind */
+.ba-after {
+  position: absolute;
+  inset: 0;
+}
+
+/* Before image clips from the left */
+.ba-before {
+  position: absolute;
+  inset: 0;
+  will-change: clip-path;
+}
+
+/* Labels */
+.ba-label {
+  position: absolute;
+  bottom: 12px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 3;
+}
+
+.ba-label--before {
+  left: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.ba-label--after {
+  right: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: hsl(186, 100%, 50%);
+}
+
+/* Divider line */
+.ba-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #fff;
+  z-index: 4;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+  will-change: left;
+}
+
+/* Handle circle */
+.ba-handle {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid hsl(186, 100%, 50%);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4), 0 0 20px hsl(186 100% 50% / 0.3);
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: left;
+  transition: box-shadow 0.15s ease;
+}
+
+.ba-handle:focus-visible {
+  outline: 2px solid hsl(186, 100%, 50%);
+  outline-offset: 2px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4), 0 0 30px hsl(186 100% 50% / 0.5);
+}
+
+.ba-handle:hover {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4), 0 0 30px hsl(186 100% 50% / 0.5);
+}
+
+.ba-handle svg {
+  width: 16px;
+  height: 16px;
+  color: hsl(186, 100%, 35%);
+}

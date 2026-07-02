@@ -17,6 +17,7 @@ const AdminDelivery = () => {
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const configured = isSupabaseConfigured() && supabase;
 
@@ -276,20 +277,42 @@ const AdminDelivery = () => {
   };
 
   if (selectedCat) {
+    const filteredItems = items.filter((item) =>
+      item.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div>
-        <button onClick={() => setSelectedCat(null)} className="flex items-center gap-1 text-xs text-primary mb-4">
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setSelectedCat(null);
+          }}
+          className="flex items-center gap-1 text-xs text-primary mb-4"
+        >
           <ArrowLeft size={14} /> Back to categories
         </button>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="font-heading font-bold text-base">{selectedCat.name}</h2>
           <label className={`flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-heading cursor-pointer ${uploading ? "opacity-50" : ""}`}>
             <Plus size={14} /> Add Item
             <input type="file" accept="image/*" onChange={addItem} className="hidden" disabled={uploading} />
           </label>
         </div>
+
+        {/* Local Search Input */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search products in this category..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div key={item.id} className="bg-card border border-border rounded-lg overflow-hidden">
               <img src={item.image_url} alt={item.label} className="w-full h-32 object-cover" />
               <div className="p-2 space-y-1">
@@ -308,6 +331,9 @@ const AdminDelivery = () => {
           ))}
         </div>
         {items.length === 0 && <p className="text-muted-foreground text-sm text-center py-8">No items. Add your first above.</p>}
+        {items.length > 0 && filteredItems.length === 0 && (
+          <p className="text-muted-foreground text-sm text-center py-8">No matching items found.</p>
+        )}
       </div>
     );
   }

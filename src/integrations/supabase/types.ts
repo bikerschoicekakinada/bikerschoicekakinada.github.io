@@ -73,49 +73,112 @@ export type Database = {
           },
         ]
       }
-      gallery: {
+      gallery_categories: {
         Row: {
-          category: string
           created_at: string
           id: string
-          image_url: string
+          name: string
           order_index: number
         }
         Insert: {
-          category: string
           created_at?: string
           id?: string
-          image_url: string
+          name: string
           order_index?: number
         }
         Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
+      gallery: {
+        Row: {
+          after_image_alt: string | null
+          after_label: string | null
+          before_image_alt: string | null
+          before_image_url: string | null
+          before_label: string | null
+          category: string
+          comparison_enabled: boolean
+          created_at: string
+          id: string
+          image_url: string
+          instagram_post_url: string | null
+          order_index: number
+        }
+        Insert: {
+          after_image_alt?: string | null
+          after_label?: string | null
+          before_image_alt?: string | null
+          before_image_url?: string | null
+          before_label?: string | null
+          category: string
+          comparison_enabled?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          instagram_post_url?: string | null
+          order_index?: number
+        }
+        Update: {
+          after_image_alt?: string | null
+          after_label?: string | null
+          before_image_alt?: string | null
+          before_image_url?: string | null
+          before_label?: string | null
           category?: string
+          comparison_enabled?: boolean
           created_at?: string
           id?: string
           image_url?: string
+          instagram_post_url?: string | null
           order_index?: number
         }
         Relationships: []
       }
       signature_work: {
         Row: {
+          after_image_alt: string | null
+          after_label: string | null
+          before_image_alt: string | null
+          before_image_url: string | null
+          before_label: string | null
+          comparison_enabled: boolean
           created_at: string
           id: string
           image_url: string
+          instagram_post_url: string | null
           label: string
           order_index: number
         }
         Insert: {
+          after_image_alt?: string | null
+          after_label?: string | null
+          before_image_alt?: string | null
+          before_image_url?: string | null
+          before_label?: string | null
+          comparison_enabled?: boolean
           created_at?: string
           id?: string
           image_url: string
+          instagram_post_url?: string | null
           label?: string
           order_index?: number
         }
         Update: {
+          after_image_alt?: string | null
+          after_label?: string | null
+          before_image_alt?: string | null
+          before_image_url?: string | null
+          before_label?: string | null
+          comparison_enabled?: boolean
           created_at?: string
           id?: string
           image_url?: string
+          instagram_post_url?: string | null
           label?: string
           order_index?: number
         }
@@ -127,6 +190,9 @@ export type Database = {
           hero_subtitle: string | null
           id: string
           instagram_followers: string | null
+          instagram_followers_last_sync: string | null
+          instagram_followers_live_count: number | null
+          instagram_followers_status: string | null
           instagram_link: string | null
           logo_url: string | null
           map_embed: string | null
@@ -139,6 +205,9 @@ export type Database = {
           hero_subtitle?: string | null
           id?: string
           instagram_followers?: string | null
+          instagram_followers_last_sync?: string | null
+          instagram_followers_live_count?: number | null
+          instagram_followers_status?: string | null
           instagram_link?: string | null
           logo_url?: string | null
           map_embed?: string | null
@@ -151,6 +220,9 @@ export type Database = {
           hero_subtitle?: string | null
           id?: string
           instagram_followers?: string | null
+          instagram_followers_last_sync?: string | null
+          instagram_followers_live_count?: number | null
+          instagram_followers_status?: string | null
           instagram_link?: string | null
           logo_url?: string | null
           map_embed?: string | null

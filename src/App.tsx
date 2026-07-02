@@ -14,15 +14,21 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 
+import { MediaViewerProvider } from "@/hooks/useMediaViewer";
+import MediaViewer from "@/components/MediaViewer/MediaViewer";
+import ProtectedRoute from "@/components/admin/ProtectedRoute";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToHash />
+      <MediaViewerProvider>
+        <Toaster />
+        <Sonner />
+        <MediaViewer />
+        <BrowserRouter>
+          <ScrollToHash />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/delivery" element={<DeliveryPage />} />
@@ -87,10 +93,27 @@ const App = () => (
           />
 
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </MediaViewerProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

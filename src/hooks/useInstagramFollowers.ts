@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 const DEFAULT_FOLLOWERS = 4800;
-const POLL_INTERVAL_MS = 5 * 60 * 1000; // Re-check every 5 minutes
+const RECOVERY_INTERVAL_MS = 30 * 60 * 1000; // Auto-recovery refresh: 30 minutes
 
 export function useInstagramFollowers() {
   const [count, setCount] = useState(0);
@@ -15,7 +15,6 @@ export function useInstagramFollowers() {
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const targetCountRef = useRef(0);
 
-  // Keep ref in sync with state so subscription/polling callbacks see latest value
   useEffect(() => {
     targetCountRef.current = targetCount;
   }, [targetCount]);
@@ -27,8 +26,8 @@ export function useInstagramFollowers() {
     return !isNaN(parsed) && parsed > 0 ? parsed : 0;
   }, []);
 
-  // Fetch follower count from Supabase
-  const fetchFromSupabase = useCallback(async (): Promise<number> => {
+  // Fetch manual count from Supabase settings as fallback
+  const fetchManualFromSupabase = useCallback(async (): Promise<number> => {
     if (!isSupabaseConfigured() || !supabase) return 0;
     try {
       const { data, error } = await supabase
@@ -40,64 +39,71 @@ export function useInstagramFollowers() {
         return parseFollowers(data.instagram_followers);
       }
     } catch (err) {
-      console.error("[useInstagramFollowers] Supabase error:", err);
+      console.error("[useInstagramFollowers] Supabase fallback error:", err);
     }
     return 0;
   }, [parseFollowers]);
 
-  // Fetch follower count — try Supabase first, then Netlify function, then default
-  useEffect(() => {
-    let cancelled = false;
+  // Combined fetch logic: Prio 1 & 2 (Vercel API: Live or Cached), Prio 3 (Supabase Manual), Prio 4 (Default)
+  const loadFollowersCount = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
 
-    const fetchCount = async () => {
-      // 1. Try Supabase first (admin-controlled or auto-updated value)
-      const supabaseCount = await fetchFromSupabase();
-      if (cancelled) return;
-      if (supabaseCount > 0) {
-        setTargetCount(supabaseCount);
-        setLoading(false);
-        return;
-      }
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch("/api/instagram-followers", {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-      // 2. Try Netlify function (fetches live from Instagram)
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch("/.netlify/functions/instagram-followers", {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        if (cancelled) return;
-        if (res.ok) {
-          const data = await res.json();
-          if (data.count && data.count > 0) {
-            setTargetCount(data.count);
-            setLoading(false);
-            return;
-          }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.count && data.count > 0) {
+          setTargetCount(data.count);
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.warn("[useInstagramFollowers] Function call failed:", err);
       }
+    } catch (err) {
+      console.warn("[useInstagramFollowers] Live API fetch failed, trying manual fallback:", err);
+    }
 
-      // 3. Default fallback
-      if (!cancelled) {
-        setTargetCount(DEFAULT_FOLLOWERS);
-        setLoading(false);
-      }
+    // Fallback: fetch manual count
+    const manualCount = await fetchManualFromSupabase();
+    if (manualCount > 0) {
+      setTargetCount(manualCount);
+      setLoading(false);
+      return;
+    }
+
+    // Default fallback
+    setTargetCount(DEFAULT_FOLLOWERS);
+    setLoading(false);
+  }, [fetchManualFromSupabase]);
+
+  // Initial load
+  useEffect(() => {
+    loadFollowersCount();
+  }, [loadFollowersCount]);
+
+  // Auto-recovery polling in background every 30 minutes
+  useEffect(() => {
+    pollTimerRef.current = setInterval(() => {
+      console.log("[useInstagramFollowers] Background recovery refresh triggered...");
+      loadFollowersCount(true);
+    }, RECOVERY_INTERVAL_MS);
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
+  }, [loadFollowersCount]);
 
-    fetchCount();
-    return () => { cancelled = true; };
-  }, [fetchFromSupabase]);
-
-  // Real-time subscription — listen for changes to site_settings in Supabase
-  // No targetCount in deps: use ref to avoid tearing down channel on every update
+  // Real-time subscription - listen to site_settings changes in Supabase
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
 
     const channel = supabase
-      .channel("instagram-followers-live")
+      .channel("instagram-followers-live-db")
       .on(
         "postgres_changes",
         {
@@ -106,11 +112,18 @@ export function useInstagramFollowers() {
           table: "site_settings",
         },
         (payload) => {
-          const newFollowers = payload.new?.instagram_followers;
-          if (newFollowers) {
-            const parsed = parseFollowers(newFollowers);
-            if (parsed > 0 && parsed !== targetCountRef.current) {
-              console.log(`[useInstagramFollowers] Live update: ${parsed}`);
+          // If the status is live or cached, try to use the live_count column
+          const newStatus = payload.new?.instagram_followers_status;
+          const newLiveCount = payload.new?.instagram_followers_live_count;
+          const newManualFollowers = payload.new?.instagram_followers;
+
+          if (newStatus === "live" && newLiveCount) {
+            setTargetCount(newLiveCount);
+          } else if (newStatus === "cached" && newLiveCount) {
+            setTargetCount(newLiveCount);
+          } else if (newManualFollowers) {
+            const parsed = parseFollowers(newManualFollowers);
+            if (parsed > 0) {
               setTargetCount(parsed);
             }
           }
@@ -123,23 +136,7 @@ export function useInstagramFollowers() {
     };
   }, [parseFollowers]);
 
-  // Auto-polling — re-fetch from Supabase every 5 minutes for freshness
-  // No targetCount in deps: use ref to avoid resetting the interval on every update
-  useEffect(() => {
-    pollTimerRef.current = setInterval(async () => {
-      const freshCount = await fetchFromSupabase();
-      if (freshCount > 0 && freshCount !== targetCountRef.current) {
-        console.log(`[useInstagramFollowers] Poll update: ${freshCount}`);
-        setTargetCount(freshCount);
-      }
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
-  }, [fetchFromSupabase]);
-
-  // Callback ref for IntersectionObserver — replays animation every time the element enters viewport
+  // Callback ref for IntersectionObserver
   const setRef = useCallback((node: HTMLElement | null) => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -156,13 +153,13 @@ export function useInstagramFollowers() {
             setIsVisible(false);
           }
         },
-        { threshold: 0.2 }
+        { threshold: 0.1 }
       );
       observerRef.current.observe(node);
     }
   }, []);
 
-  // Animate counter from 0 → target every time element becomes visible
+  // Animation effect
   useEffect(() => {
     if (!isVisible || targetCount === 0) return;
 
@@ -177,7 +174,7 @@ export function useInstagramFollowers() {
       if (!startTimeRef.current) startTimeRef.current = timestamp;
       const elapsed = timestamp - startTimeRef.current;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
       setCount(Math.floor(eased * targetCount));
 
       if (progress < 1) {
@@ -194,7 +191,7 @@ export function useInstagramFollowers() {
     };
   }, [isVisible, targetCount]);
 
-  // Cleanup observer on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (observerRef.current) observerRef.current.disconnect();

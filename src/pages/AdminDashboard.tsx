@@ -21,14 +21,14 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!isAdminLoggedIn()) {
-      navigate("/admin", { replace: true });
+      navigate("/admin/login", { replace: true });
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    adminLogout();
+  const handleLogout = async () => {
+    await adminLogout();
     toast.success("Logged out");
-    navigate("/admin");
+    navigate("/admin/login");
   };
 
   if (!isAdminLoggedIn()) {

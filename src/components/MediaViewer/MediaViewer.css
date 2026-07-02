@@ -1,0 +1,208 @@
+/* MediaViewer - Styles for full screen viewer */
+
+.mv-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.mv-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.mv-image-container {
+  max-width: 90vw;
+  max-height: 80vh;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: visible;
+}
+
+.mv-image-zoomable {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.1s ease-out;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mv-image-zoomable:active {
+  cursor: grabbing;
+}
+
+/* Toolbar (Header) */
+.mv-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1.5rem;
+  z-index: 1010;
+  pointer-events: auto;
+}
+
+.mv-counter {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.mv-close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mv-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: hsl(186, 100%, 50%);
+}
+
+/* Navigation Arrow Buttons */
+.mv-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 1005;
+  outline: none;
+}
+
+.mv-nav-btn:hover {
+  background-color: hsl(186, 100%, 50%);
+  color: #000;
+  box-shadow: 0 0 15px hsl(186 100% 50% / 0.5);
+  border-color: hsl(186, 100%, 50%);
+}
+
+.mv-nav-btn--prev {
+  left: 1.5rem;
+}
+
+.mv-nav-btn--next {
+  right: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .mv-nav-btn {
+    display: none; /* Swipe gestures are enough on mobile */
+  }
+}
+
+/* Footer / Reel Button area */
+.mv-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1010;
+}
+
+.mv-label {
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.mv-reel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, hsl(186, 100%, 50%), hsl(348, 100%, 50%));
+  color: #000;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 1.2rem;
+  border-radius: 9999px;
+  box-shadow: 0 0 15px rgba(186, 100, 50, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mv-reel-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px hsl(186 100% 50% / 0.6);
+}
+
+/* Double arrow icon for swipe guidance */
+.mv-swipe-guide {
+  position: absolute;
+  bottom: 5rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+  font-family: 'Rajdhani', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: pulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* Comparison specific override inside viewer */
+.mv-image-container .ba-container {
+  width: 90vw;
+  max-width: 500px;
+  aspect-ratio: 4 / 5;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
