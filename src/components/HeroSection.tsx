@@ -77,6 +77,15 @@ const HeroSection = () => {
       {settings.online_delivery_button_enabled && (
         <a
           href="#delivery"
+          onClick={(e) => {
+            e.preventDefault();
+            const el = document.getElementById("delivery");
+            if (el) {
+              const top = window.scrollY + el.getBoundingClientRect().top - 96;
+              window.scrollTo({ top, behavior: "smooth" });
+            }
+            window.history.replaceState(null, "", `${window.location.pathname}#delivery`);
+          }}
           className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-2.5 px-4 rounded-full text-sm shadow-lg neon-border-cyan animate-pulse-neon hover:scale-110 transition-transform">
 
           <Truck size={16} /> Online Delivery
