@@ -11,7 +11,7 @@ const SUPABASE_KEY_FALLBACK = "sb_publishable_zaGtYw4hO9zzxtx76NUs3A_skIt7IDm";
 
 function getSupabaseClient() {
   const url = process.env.VITE_SUPABASE_URL || SUPABASE_URL_FALLBACK;
-  const key = process.env.VITE_SUPABASE_ANON_KEY || SUPABASE_KEY_FALLBACK;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || SUPABASE_KEY_FALLBACK;
   if (!url || !key) return null;
   return createClient(url, key);
 }

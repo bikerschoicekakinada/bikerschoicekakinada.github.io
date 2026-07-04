@@ -13,6 +13,8 @@ import BikeAccessoriesCityPage from "./pages/BikeAccessoriesCity";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Products from "./pages/Products";
+import Gallery from "./pages/Gallery";
 
 import { MediaViewerProvider } from "@/hooks/useMediaViewer";
 import MediaViewer from "@/components/MediaViewer/MediaViewer";
@@ -31,6 +33,9 @@ const App = () => (
           <ScrollToHash />
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/galleryphotos" element={<Gallery />} />
           <Route path="/delivery" element={<DeliveryPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />

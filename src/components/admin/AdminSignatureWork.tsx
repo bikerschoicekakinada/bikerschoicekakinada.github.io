@@ -52,6 +52,25 @@ const AdminSignatureWork = () => {
   const [editComparison, setEditComparison] = useState(false);
   const [editInstagramUrl, setEditInstagramUrl] = useState("");
 
+  const fetchItems = async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    try {
+      const { data, error } = await supabase.from("signature_work").select("*").order("created_at", { ascending: false });
+      if (error) {
+        console.error("[AdminSignatureWork] Fetch error:", error);
+        toast.error("Failed to load signature work: " + error.message);
+        setLoaded(true);
+        return;
+      }
+      if (data) setItems(data as SignatureItem[]);
+    } catch (err) {
+      console.error("[AdminSignatureWork] Fetch failed:", err);
+    }
+    setLoaded(true);
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
   if (!isSupabaseConfigured() || !supabase) {
     return (
       <div className="text-center py-8">
@@ -72,24 +91,6 @@ const AdminSignatureWork = () => {
       </div>
     );
   }
-
-  const fetchItems = async () => {
-    try {
-      const { data, error } = await supabase.from("signature_work").select("*").order("order_index");
-      if (error) {
-        console.error("[AdminSignatureWork] Fetch error:", error);
-        toast.error("Failed to load signature work: " + error.message);
-        setLoaded(true);
-        return;
-      }
-      if (data) setItems(data as SignatureItem[]);
-    } catch (err) {
-      console.error("[AdminSignatureWork] Fetch failed:", err);
-    }
-    setLoaded(true);
-  };
-
-  useEffect(() => { fetchItems(); }, []);
 
   const uploadImage = async (file: File, prefix: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();

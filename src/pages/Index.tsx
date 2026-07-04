@@ -1,8 +1,9 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
+import ServicesSection from "@/components/ServicesSection";
+import BuildOfTheWeek from "@/components/BuildOfTheWeek";
 import SignatureWork from "@/components/SignatureWork";
 import SocialSection from "@/components/SocialSection";
-import ServicesSection from "@/components/ServicesSection";
 import GallerySection from "@/components/GallerySection";
 import OnlineDelivery from "@/components/OnlineDelivery";
 import AboutSection from "@/components/AboutSection";
@@ -15,13 +16,14 @@ const Index = () => {
       <Navbar />
       <HeroSection />
       <SignatureWork />
-      <SocialSection />
-      <ServicesSection />
+      <BuildOfTheWeek />
       <GallerySection />
       <OnlineDelivery />
+      <SocialSection />
+      <ServicesSection />
       <AboutSection />
       <ContactSection />
-      <section className="py-14 px-4 bg-surface">
+      <section className="py-14 px-4 bg-surface/30">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-xl md:text-3xl font-display font-bold text-center mb-4 neon-glow-cyan">
             Bike Accessories and Motorcycle Modification Shop in Kakinada

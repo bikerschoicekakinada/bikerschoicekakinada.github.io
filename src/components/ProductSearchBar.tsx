@@ -54,9 +54,9 @@ const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            placeholder="Search products, brands, bike models..."
+            placeholder="Search helmets, tyres, riding gear, custom wraps..."
             className="w-full bg-muted/60 border border-border/80 hover:border-primary/50 focus:border-primary rounded-full pl-11 pr-10 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all font-heading font-medium tracking-wide"
-            aria-label="Search products, brands, bike models"
+            aria-label="Search helmets, tyres, riding gear, custom wraps"
           />
 
           {/* Loading / Clear Controls */}

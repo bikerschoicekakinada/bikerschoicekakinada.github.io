@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, Plus, RefreshCw, Image as ImageIcon, X, Instagram, Edit3, GripVertical, FolderPlus } from "lucide-react";
@@ -16,6 +16,8 @@ type GalleryItem = {
   after_label: string | null;
   comparison_enabled: boolean;
   instagram_post_url: string | null;
+  label: string;
+  compatible_bikes: string[];
 };
 
 type GalleryCategory = {
@@ -56,6 +58,8 @@ const AdminGallery = () => {
   const [addAfterLabel, setAddAfterLabel] = useState("After");
   const [addComparison, setAddComparison] = useState(false);
   const [addInstagramUrl, setAddInstagramUrl] = useState("");
+  const [addLabel, setAddLabel] = useState("");
+  const [addCompatibleBikes, setAddCompatibleBikes] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
 
   // --- Edit state ---
@@ -65,34 +69,16 @@ const AdminGallery = () => {
   const [editAfterLabel, setEditAfterLabel] = useState("After");
   const [editComparison, setEditComparison] = useState(false);
   const [editInstagramUrl, setEditInstagramUrl] = useState("");
-
-  if (!isSupabaseConfigured() || !supabase) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground text-sm">Database not configured. Please set Supabase environment variables.</p>
-        <div className="mt-4">
-          <p className="text-xs font-heading font-semibold text-primary mb-2">Main Page Currently Shows These Default Images:</p>
-          <div className="grid grid-cols-2 gap-3">
-            {DEFAULT_GALLERY_IMAGES.map((img, idx) => (
-              <div key={idx} className="relative rounded-lg overflow-hidden border border-border border-dashed opacity-75">
-                <img src={img.src} alt={img.cat} className="w-full h-32 object-cover" />
-                <div className="absolute bottom-0 left-0 right-0 bg-background/70 px-2 py-1">
-                  <p className="text-[10px] text-muted-foreground">{img.cat}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [editLabel, setEditLabel] = useState("");
+  const [editCompatibleBikes, setEditCompatibleBikes] = useState("");
 
   // Get effective category names for tab display
   const effectiveCategoryNames = dbCategoriesAvailable && categories.length > 0
     ? categories.map((c) => c.name)
     : DEFAULT_GALLERY_CATEGORIES;
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
     try {
       const { data, error } = await supabase
         .from("gallery_categories")
@@ -119,11 +105,12 @@ const AdminGallery = () => {
         setSelectedCat(DEFAULT_GALLERY_CATEGORIES[0]);
       }
     }
-  };
+  }, [selectedCat]);
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
     try {
-      const { data, error } = await supabase.from("gallery").select("*").order("order_index");
+      const { data, error } = await supabase.from("gallery").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error("[AdminGallery] Fetch error:", error);
         toast.error("Failed to load gallery: " + error.message);
@@ -135,12 +122,33 @@ const AdminGallery = () => {
       console.error("[AdminGallery] Fetch failed:", err);
     }
     setLoaded(true);
-  };
+  }, []);
 
   useEffect(() => {
     fetchCategories();
     fetchItems();
-  }, []);
+  }, [fetchCategories, fetchItems]);
+
+  if (!isSupabaseConfigured() || !supabase) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground text-sm">Database not configured. Please set Supabase environment variables.</p>
+        <div className="mt-4">
+          <p className="text-xs font-heading font-semibold text-primary mb-2">Main Page Currently Shows These Default Images:</p>
+          <div className="grid grid-cols-2 gap-3">
+            {DEFAULT_GALLERY_IMAGES.map((img, idx) => (
+              <div key={idx} className="relative rounded-lg overflow-hidden border border-border border-dashed opacity-75">
+                <img src={img.src} alt={img.cat} className="w-full h-32 object-cover" />
+                <div className="absolute bottom-0 left-0 right-0 bg-background/70 px-2 py-1">
+                  <p className="text-[10px] text-muted-foreground">{img.cat}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = items.filter((i) => i.category === selectedCat);
   const fallbackFiltered = DEFAULT_GALLERY_IMAGES.filter((img) => img.cat === selectedCat);
@@ -315,6 +323,8 @@ const AdminGallery = () => {
           category: img.cat,
           image_url: urlData.publicUrl,
           order_index: i,
+          label: (img as { label?: string }).label ?? `${img.cat} Custom Design`,
+          compatible_bikes: (img as { compatible_bikes?: string[] }).compatible_bikes ?? [],
         });
         if (insertError) {
           console.error("Insert failed for gallery image", i, insertError);
@@ -344,6 +354,8 @@ const AdminGallery = () => {
     setAddAfterLabel("After");
     setAddComparison(false);
     setAddInstagramUrl("");
+    setAddLabel("");
+    setAddCompatibleBikes("");
     setShowAddForm(false);
   };
 
@@ -369,6 +381,10 @@ const AdminGallery = () => {
       }
 
       const hasComparison = addComparison && !!beforeUrl;
+      const bikeArray = addCompatibleBikes
+        .split(",")
+        .map((b) => b.trim())
+        .filter((b) => b.length > 0);
 
       const { error: insertError } = await supabase.from("gallery").insert({
         category: selectedCat,
@@ -379,6 +395,8 @@ const AdminGallery = () => {
         after_label: hasComparison ? (addAfterLabel || "After") : null,
         comparison_enabled: hasComparison,
         instagram_post_url: addInstagramUrl ? addInstagramUrl.trim() : null,
+        label: addLabel.trim(),
+        compatible_bikes: bikeArray,
       });
       if (insertError) {
         toast.error("Failed to save image: " + insertError.message);
@@ -414,6 +432,8 @@ const AdminGallery = () => {
     setEditAfterLabel(item.after_label || "After");
     setEditComparison(item.comparison_enabled && !!item.before_image_url);
     setEditInstagramUrl(item.instagram_post_url || "");
+    setEditLabel(item.label || "");
+    setEditCompatibleBikes((item.compatible_bikes || []).join(", "));
   };
 
   const handleEditSave = async (item: GalleryItem) => {
@@ -432,6 +452,10 @@ const AdminGallery = () => {
       }
 
       const hasComparison = editComparison && !!beforeUrl;
+      const bikeArray = editCompatibleBikes
+        .split(",")
+        .map((b) => b.trim())
+        .filter((b) => b.length > 0);
 
       const { error } = await supabase.from("gallery").update({
         before_image_url: hasComparison ? beforeUrl : null,
@@ -439,6 +463,8 @@ const AdminGallery = () => {
         after_label: hasComparison ? (editAfterLabel || "After") : null,
         comparison_enabled: hasComparison,
         instagram_post_url: editInstagramUrl ? editInstagramUrl.trim() : null,
+        label: editLabel.trim(),
+        compatible_bikes: bikeArray,
       }).eq("id", item.id);
 
       if (error) {
@@ -708,6 +734,30 @@ const AdminGallery = () => {
             </div>
           )}
 
+          {/* Label/Title (optional) */}
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Label / Title (Optional)</p>
+            <input
+              type="text"
+              value={addLabel}
+              onChange={(e) => setAddLabel(e.target.value)}
+              placeholder="e.g. Yamaha R15 Neon Wrap"
+              className="w-full bg-muted border-none rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {/* Compatible Bikes (optional) */}
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Compatible Bikes (Optional, comma-separated)</p>
+            <input
+              type="text"
+              value={addCompatibleBikes}
+              onChange={(e) => setAddCompatibleBikes(e.target.value)}
+              placeholder="e.g. Duke, KTM, 390"
+              className="w-full bg-muted border-none rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
           {/* Instagram Post/Reel URL (optional) */}
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Instagram Post/Reel URL (Optional)</p>
@@ -838,6 +888,30 @@ const AdminGallery = () => {
                       )}
                     </>
                   )}
+
+                  {/* Label / Title Edit */}
+                  <div className="space-y-0.5 mt-1">
+                    <p className="text-[9px] text-muted-foreground font-semibold">LABEL / TITLE</p>
+                    <input
+                      type="text"
+                      value={editLabel}
+                      onChange={(e) => setEditLabel(e.target.value)}
+                      placeholder="Title"
+                      className="w-full bg-muted border-none rounded px-1.5 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+
+                  {/* Compatible Bikes Edit */}
+                  <div className="space-y-0.5 mt-1">
+                    <p className="text-[9px] text-muted-foreground font-semibold">COMPATIBLE BIKES (COMMA-SEPARATED)</p>
+                    <input
+                      type="text"
+                      value={editCompatibleBikes}
+                      onChange={(e) => setEditCompatibleBikes(e.target.value)}
+                      placeholder="e.g. Duke, KTM"
+                      className="w-full bg-muted border-none rounded px-1.5 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
 
                   {/* Instagram Edit Field */}
                   <div className="space-y-0.5 mt-1">

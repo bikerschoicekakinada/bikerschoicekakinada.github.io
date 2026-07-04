@@ -32,7 +32,7 @@ const SignatureWork = () => {
 
     const fetchWorks = async () => {
       try {
-        const { data, error } = await supabase.from("signature_work").select("*").order("order_index");
+        const { data, error } = await supabase.from("signature_work").select("*").order("created_at", { ascending: false });
         if (!error && active) {
           const mapped: WorkItem[] = (data || []).map((d) => ({
             id: d.id,

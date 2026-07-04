@@ -5,10 +5,10 @@ import { useLocation } from "react-router-dom";
 const sections = [
   { id: "home", label: "Home" },
   { id: "signature", label: "Custom Work" },
-  { id: "social", label: "Social" },
-  { id: "services", label: "Services" },
   { id: "gallery", label: "Gallery" },
   { id: "delivery", label: "Delivery" },
+  { id: "social", label: "Social" },
+  { id: "services", label: "Services" },
   { id: "about", label: "About" },
   { id: "contact", label: "Contact" },
 ];

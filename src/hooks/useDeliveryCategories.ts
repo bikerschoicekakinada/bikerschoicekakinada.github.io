@@ -5,8 +5,10 @@ import { DEFAULT_DELIVERY_CATEGORIES } from "@/lib/mediaDefaults";
 export type DeliveryCategory = {
   id: string;
   name: string;
+  description: string | null;
   icon_url: string | null;
   order_index: number;
+  visibility: boolean;
   created_at: string;
 };
 
@@ -21,6 +23,8 @@ export function useDeliveryCategories() {
       setCategories(
         DEFAULT_DELIVERY_CATEGORIES.map((cat) => ({
           ...cat,
+          description: null,
+          visibility: true,
           created_at: "",
         }))
       );
@@ -46,6 +50,8 @@ export function useDeliveryCategories() {
           setCategories(
             DEFAULT_DELIVERY_CATEGORIES.map((cat) => ({
               ...cat,
+              description: null,
+              visibility: true,
               created_at: "",
             }))
           );
@@ -60,6 +66,8 @@ export function useDeliveryCategories() {
           setCategories(
             DEFAULT_DELIVERY_CATEGORIES.map((cat) => ({
               ...cat,
+              description: null,
+              visibility: true,
               created_at: "",
             }))
           );
@@ -73,6 +81,8 @@ export function useDeliveryCategories() {
           setCategories(
             DEFAULT_DELIVERY_CATEGORIES.map((cat) => ({
               ...cat,
+              description: null,
+              visibility: true,
               created_at: "",
             }))
           );

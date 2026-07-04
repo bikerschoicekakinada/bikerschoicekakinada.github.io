@@ -1,11 +1,13 @@
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { MessageCircle, Phone, Instagram, MapPin, Truck } from "lucide-react";
 import logo from "@/assets/logo.jpeg";
 import InstagramCounter from "./InstagramCounter";
 
 const HeroSection = () => {
   const { settings } = useSiteSettings();
+  const navigate = useNavigate();
 
   return (
     <section id="home" className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-10 overflow-hidden">
@@ -16,83 +18,92 @@ const HeroSection = () => {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 flex flex-col items-center text-center">
+        className="relative z-10 flex flex-col items-center text-center w-full max-w-4xl">
 
         {/* Logo */}
-        <div className="w-32 h-32 md:w-44 md:h-44 rounded-full overflow-hidden border-2 border-primary neon-border-cyan mb-6">
+        <div className="w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 rounded-full overflow-hidden border-4 border-primary neon-border-cyan mb-8 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
           <img src={logo} alt="Bikers Choice Kakinada Logo" className="w-full h-full object-cover" />
         </div>
 
-        <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-4 neon-glow-cyan max-w-3xl">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight mb-4 neon-glow-cyan max-w-3xl">
           Premium Bike Modification & Custom Builds in Kakinada
         </h1>
 
-        <p className="text-sm md:text-base text-muted-foreground max-w-xl mb-6 font-body">
+        <p className="text-sm sm:text-base text-muted-foreground max-w-xl mb-8 font-body px-2">
           {settings.hero_subtitle}
         </p>
 
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6 w-full max-w-sm">
-          <a
+        {/* CTAs - 3 responsive buttons designed for mobile accessibility */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 w-full max-w-md sm:max-w-2xl px-2">
+          <motion.a
             href="https://wa.me/918523876978"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-3 px-6 rounded-full text-sm neon-border-cyan hover:scale-105 transition-transform">
-
+            whileHover={{ scale: 1.04, boxShadow: "0 0 15px rgba(34, 211, 238, 0.4)" }}
+            whileTap={{ scale: 0.96 }}
+            className="flex-1 flex items-center justify-center gap-2.5 bg-primary text-primary-foreground font-heading font-bold py-3.5 px-6 rounded-full text-sm sm:text-base neon-border-cyan transition-shadow duration-300"
+          >
             <MessageCircle size={18} /> WhatsApp Us
-          </a>
-          <a
-            href="tel:+918523876978"
-            className="flex-1 flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-heading font-bold py-3 px-6 rounded-full text-sm neon-border-red hover:scale-105 transition-transform">
+          </motion.a>
 
+          {settings.online_delivery_button_enabled && (
+            <motion.button
+              onClick={() => navigate("/products")}
+              whileHover={{ scale: 1.04, boxShadow: "0 0 15px rgba(244, 63, 94, 0.4)" }}
+              whileTap={{ scale: 0.96 }}
+              className="flex-1 flex items-center justify-center gap-2.5 bg-secondary text-secondary-foreground font-heading font-bold py-3.5 px-6 rounded-full text-sm sm:text-base neon-border-red transition-shadow duration-300"
+            >
+              <Truck size={18} /> Online Delivery
+            </motion.button>
+          )}
+
+          <motion.a
+            href="tel:+918523876978"
+            whileHover={{ scale: 1.04, boxShadow: "0 0 15px rgba(255, 255, 255, 0.15)" }}
+            whileTap={{ scale: 0.96 }}
+            className="flex-1 flex items-center justify-center gap-2.5 bg-card border border-border text-foreground font-heading font-bold py-3.5 px-6 rounded-full text-sm sm:text-base hover:border-primary/50 transition-shadow duration-300"
+          >
             <Phone size={18} /> Call Now
-          </a>
+          </motion.a>
         </div>
 
         {/* Instagram Badge with live counter */}
-        <a
+        <motion.a
           href={settings.instagram_link}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-surface border px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-primary transition-colors mb-4 shadow font-semibold border-primary">
-
+          whileHover={{ scale: 1.03 }}
+          className="inline-flex items-center gap-2 bg-surface border px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-primary transition-colors mb-6 shadow font-semibold border-primary">
           <Instagram size={14} className="text-primary" />
           Follow us on Instagram –{" "}
           <span className="font-medium text-primary">
             <InstagramCounter />
           </span>{" "}
           riders
-        </a>
+        </motion.a>
 
         {/* Location */}
-        <a
+        <motion.a
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-full text-sm font-heading font-semibold text-foreground hover:border-primary hover:text-primary transition-colors shadow" href="https://maps.app.goo.gl/fL4Lk5HGVNdVyu2d8">
+          whileHover={{ scale: 1.03 }}
+          className="inline-flex items-center gap-2 bg-card border border-border px-5 py-3 rounded-full text-sm font-heading font-semibold text-foreground hover:border-primary hover:text-primary transition-colors shadow" href="https://maps.app.goo.gl/fL4Lk5HGVNdVyu2d8">
           <MapPin size={16} className="text-secondary" /> Open Google Maps Directions
-        </a>
+        </motion.a>
       </motion.div>
 
       {/* Floating Online Delivery Button - controlled by admin settings */}
       {settings.online_delivery_button_enabled && (
-        <a
-          href="#delivery"
-          onClick={(e) => {
-            e.preventDefault();
-            const el = document.getElementById("delivery");
-            if (el) {
-              const top = window.scrollY + el.getBoundingClientRect().top - 96;
-              window.scrollTo({ top, behavior: "smooth" });
-            }
-            window.history.replaceState(null, "", `${window.location.pathname}#delivery`);
-          }}
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-2.5 px-4 rounded-full text-sm shadow-lg neon-border-cyan animate-pulse-neon hover:scale-110 transition-transform">
-
+        <motion.button
+          onClick={() => navigate("/products")}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground font-heading font-bold py-2.5 px-4 rounded-full text-sm shadow-lg neon-border-cyan animate-pulse-neon transition-transform">
           <Truck size={16} /> Online Delivery
-        </a>
+        </motion.button>
       )}
-    </section>);
-
+    </section>
+  );
 };
 
 export default HeroSection;

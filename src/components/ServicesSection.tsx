@@ -5,7 +5,7 @@ const serviceGroups = [
   {
     title: "Customization",
     icon: Paintbrush,
-    items: ["Full body modification", "Custom premium painting", "Wraps & stickers", "Alloy customization"],
+    items: ["Full body modification", "Hydro dipping", "Custom premium paintings", "Wraps & stickers", "Alloy customization"],
   },
   {
     title: "Lighting",

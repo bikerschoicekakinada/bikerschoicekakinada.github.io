@@ -82,7 +82,8 @@ export function performSmartSearch(
   items: DeliveryItem[],
   categories: DeliveryCategory[],
   query: string,
-  categoryIdScope: string | null = null
+  categoryIdScope: string | null = null,
+  subcategories: { id: string; name: string }[] = []
 ): SearchResult[] {
   const trimmed = query.trim().toLowerCase().replace(/\s+/g, " ");
   if (!trimmed) return [];
@@ -98,15 +99,25 @@ export function performSmartSearch(
 
     const category = categories.find((c) => c.id === item.category_id);
     const categoryName = category ? category.name.toLowerCase() : "";
+
+    const subcategory = subcategories.find((s) => s.id === item.subcategory_id);
+    const subcategoryName = subcategory ? subcategory.name.toLowerCase() : "";
+
     const itemLabel = item.label.toLowerCase();
     const itemWords = itemLabel.split(/[ \-_/]/).filter(Boolean);
+    const brand = (item.brand || "").toLowerCase();
+    const description = (item.description || "").toLowerCase();
+    
+    const compatibleBikes = (item.compatible_bikes || []).map(b => b.toLowerCase());
+    const tags = (item.tags || []).map(t => t.toLowerCase());
+    const searchKeywords = (item.search_keywords || []).map(k => k.toLowerCase());
 
     let matchCount = 0;
     let totalScore = 0;
 
     // Check if the entire query matches the label exactly
     if (itemLabel.includes(trimmed)) {
-      totalScore += 200;
+      totalScore += 250;
       if (itemLabel === trimmed) {
         totalScore += 1000;
       }
@@ -117,19 +128,70 @@ export function performSmartSearch(
       let wordMatched = false;
       let highestWordScore = 0;
 
-      // Check category match
-      if (categoryName.includes(qWord)) {
-        wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 40);
+      // 1. Check Custom Admin Keywords (Highest score)
+      for (const keyword of searchKeywords) {
+        if (keyword === qWord) {
+          wordMatched = true;
+          highestWordScore = Math.max(highestWordScore, 180);
+        } else if (keyword.includes(qWord)) {
+          wordMatched = true;
+          highestWordScore = Math.max(highestWordScore, 90);
+        }
       }
 
-      // Check match against each word in the product label
+      // 2. Check Brand Match
+      if (brand === qWord) {
+        wordMatched = true;
+        highestWordScore = Math.max(highestWordScore, 150);
+      } else if (brand.includes(qWord)) {
+        wordMatched = true;
+        highestWordScore = Math.max(highestWordScore, 75);
+      }
+
+      // 3. Check Compatible Bike Models Match
+      for (const bike of compatibleBikes) {
+        if (bike === qWord) {
+          wordMatched = true;
+          highestWordScore = Math.max(highestWordScore, 120);
+        } else if (bike.includes(qWord)) {
+          wordMatched = true;
+          highestWordScore = Math.max(highestWordScore, 60);
+        }
+      }
+
+      // 4. Check Product Label Word Match
       for (const pWord of itemWords) {
         const { matches, score } = isWordMatch(qWord, pWord);
         if (matches) {
           wordMatched = true;
           highestWordScore = Math.max(highestWordScore, score);
         }
+      }
+
+      // 5. Check Subcategory Match
+      if (subcategoryName.includes(qWord)) {
+        wordMatched = true;
+        highestWordScore = Math.max(highestWordScore, 50);
+      }
+
+      // 6. Check Category Match
+      if (categoryName.includes(qWord)) {
+        wordMatched = true;
+        highestWordScore = Math.max(highestWordScore, 30);
+      }
+
+      // 7. Check Tags Match
+      for (const tag of tags) {
+        if (tag.includes(qWord)) {
+          wordMatched = true;
+          highestWordScore = Math.max(highestWordScore, 30);
+        }
+      }
+
+      // 8. Check Description Match
+      if (description.includes(qWord)) {
+        wordMatched = true;
+        highestWordScore = Math.max(highestWordScore, 10);
       }
 
       if (wordMatched) {
@@ -140,7 +202,6 @@ export function performSmartSearch(
 
     // All query words must match somewhere (Fuzzy or exact)
     if (matchCount === queryWords.length) {
-      // Prioritize exact match and position
       results.push({ item, score: totalScore });
     }
   }
@@ -149,9 +210,6 @@ export function performSmartSearch(
   return results.sort((a, b) => b.score - a.score);
 }
 
-/**
- * Generates auto-complete search suggestions (like Amazon).
- */
 export function generateSuggestions(
   items: DeliveryItem[],
   categories: DeliveryCategory[],
@@ -182,10 +240,17 @@ export function generateSuggestions(
     // If it matches all query words as substrings
     const matchesAll = queryWords.every(word => labelLower.includes(word));
     if (matchesAll) {
-      // Clean suggestions (e.g. showing full product title or short common parts)
       suggestionsMap.set(`item:${label}`, {
         text: label,
         type: "product",
+      });
+    }
+
+    // Suggest matching brands
+    if (item.brand && item.brand.toLowerCase().includes(trimmed)) {
+      suggestionsMap.set(`brand:${item.brand}`, {
+        text: item.brand,
+        type: "brand",
       });
     }
   });

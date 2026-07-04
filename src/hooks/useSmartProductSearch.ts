@@ -12,25 +12,41 @@ export function useSmartProductSearch(
   const [allItems, setAllItems] = useState<DeliveryItem[]>([]);
   const [searchResults, setSearchResults] = useState<DeliveryItem[]>([]);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [subcategories, setSubcategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const fetchedRef = useRef(false);
 
   const fetchAllItems = useCallback(async () => {
     if (useFallback) {
-      let fallbackItems: DeliveryItem[] = [];
+      const fallbackItems: DeliveryItem[] = [];
       Object.entries(DEFAULT_DELIVERY_ITEMS).forEach(([catId, list]) => {
         list.forEach((item, index) => {
           fallbackItems.push({
             id: `${catId}-${index}`,
             category_id: catId,
+            subcategory_id: null,
             image_url: item.image_url,
             label: item.label,
             order_index: item.order_index,
             created_at: "",
+            brand: null,
+            price: null,
+            description: null,
+            availability: true,
+            compatible_bikes: [],
+            instagram_reel_url: null,
+            before_image_url: null,
+            after_image_url: null,
+            tags: [],
+            search_keywords: [],
+            featured: false,
+            visibility: true,
+            additional_images: [],
           });
         });
       });
       setAllItems(fallbackItems);
+      setSubcategories([]);
       return;
     }
 
@@ -38,16 +54,22 @@ export function useSmartProductSearch(
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from("delivery_items")
-        .select("*")
-        .order("order_index");
+      const [itemsRes, subcatsRes] = await Promise.all([
+        supabase.from("delivery_items").select("*").order("created_at", { ascending: false }),
+        supabase.from("delivery_subcategories").select("id, name").order("order_index"),
+      ]);
 
-      if (error) {
-        console.error("[useSmartProductSearch] Fetch all items error:", error);
-      } else if (data) {
-        setAllItems(data);
+      if (itemsRes.error) {
+        console.error("[useSmartProductSearch] Fetch all items error:", itemsRes.error);
+      } else if (itemsRes.data) {
+        setAllItems(itemsRes.data);
         fetchedRef.current = true;
+      }
+
+      if (subcatsRes.error) {
+        console.error("[useSmartProductSearch] Fetch subcategories error:", subcatsRes.error);
+      } else if (subcatsRes.data) {
+        setSubcategories(subcatsRes.data);
       }
     } catch (err) {
       console.error("[useSmartProductSearch] Fetch all items exception:", err);
@@ -63,20 +85,33 @@ export function useSmartProductSearch(
     if (useFallback || !isSupabaseConfigured() || !supabase) return;
 
     // Realtime listener for product updates
-    const channel = supabase
+    const channelItems = supabase
       .channel("delivery-items-smart-sync")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_items" },
         () => {
-          console.log("[useSmartProductSearch] Syncing local catalog with database updates...");
+          console.log("[useSmartProductSearch] Syncing local catalog items...");
+          fetchAllItems();
+        }
+      )
+      .subscribe();
+
+    const channelSubcats = supabase
+      .channel("delivery-subcats-smart-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_subcategories" },
+        () => {
+          console.log("[useSmartProductSearch] Syncing local catalog subcategories...");
           fetchAllItems();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channelItems);
+      supabase.removeChannel(channelSubcats);
     };
   }, [fetchAllItems, useFallback]);
 
@@ -91,14 +126,14 @@ export function useSmartProductSearch(
       }
 
       // 1. Perform relevance matching
-      const matches = performSmartSearch(allItems, categories, trimmed, categoryIdScope);
+      const matches = performSmartSearch(allItems, categories, trimmed, categoryIdScope, subcategories);
       setSearchResults(matches.map((m) => m.item));
 
       // 2. Generate suggestions
       const suggs = generateSuggestions(allItems, categories, trimmed);
       setSuggestions(suggs);
     },
-    [allItems, categories]
+    [allItems, categories, subcategories]
   );
 
   return { allItems, searchResults, suggestions, search, loading };

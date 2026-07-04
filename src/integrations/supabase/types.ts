@@ -17,24 +17,30 @@ export type Database = {
       delivery_categories: {
         Row: {
           created_at: string
+          description: string | null
           icon_url: string | null
           id: string
           name: string
           order_index: number
+          visibility: boolean
         }
         Insert: {
           created_at?: string
+          description?: string | null
           icon_url?: string | null
           id?: string
           name: string
           order_index?: number
+          visibility?: boolean
         }
         Update: {
           created_at?: string
+          description?: string | null
           icon_url?: string | null
           id?: string
           name?: string
           order_index?: number
+          visibility?: boolean
         }
         Relationships: []
       }
@@ -46,6 +52,20 @@ export type Database = {
           image_url: string
           label: string
           order_index: number
+          subcategory_id: string | null
+          brand: string | null
+          price: number | null
+          description: string | null
+          availability: boolean
+          compatible_bikes: string[]
+          instagram_reel_url: string | null
+          before_image_url: string | null
+          after_image_url: string | null
+          tags: string[]
+          search_keywords: string[]
+          featured: boolean
+          visibility: boolean
+          additional_images: string[]
         }
         Insert: {
           category_id: string
@@ -54,6 +74,20 @@ export type Database = {
           image_url: string
           label?: string
           order_index?: number
+          subcategory_id?: string | null
+          brand?: string | null
+          price?: number | null
+          description?: string | null
+          availability?: boolean
+          compatible_bikes?: string[]
+          instagram_reel_url?: string | null
+          before_image_url?: string | null
+          after_image_url?: string | null
+          tags?: string[]
+          search_keywords?: string[]
+          featured?: boolean
+          visibility?: boolean
+          additional_images?: string[]
         }
         Update: {
           category_id?: string
@@ -62,10 +96,72 @@ export type Database = {
           image_url?: string
           label?: string
           order_index?: number
+          subcategory_id?: string | null
+          brand?: string | null
+          price?: number | null
+          description?: string | null
+          availability?: boolean
+          compatible_bikes?: string[]
+          instagram_reel_url?: string | null
+          before_image_url?: string | null
+          after_image_url?: string | null
+          tags?: string[]
+          search_keywords?: string[]
+          featured?: boolean
+          visibility?: boolean
+          additional_images?: string[]
         }
         Relationships: [
           {
             foreignKeyName: "delivery_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_items_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_subcategories: {
+        Row: {
+          category_id: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          order_index: number
+          visibility: boolean
+        }
+        Insert: {
+          category_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          visibility?: boolean
+        }
+        Update: {
+          category_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          visibility?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_subcategories_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "delivery_categories"

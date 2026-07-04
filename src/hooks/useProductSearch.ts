@@ -102,7 +102,7 @@ export function useProductSearch(
           }
         }
 
-        const { data, error } = await sbQuery.order("order_index").limit(100);
+        const { data, error } = await sbQuery.order("created_at", { ascending: false }).limit(100);
 
         if (!active) return;
 

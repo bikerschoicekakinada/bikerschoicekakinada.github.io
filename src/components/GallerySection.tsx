@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { DEFAULT_GALLERY_CATEGORIES, DEFAULT_GALLERY_IMAGES } from "@/lib/mediaDefaults";
-import { useMediaViewer, MediaItem } from "@/hooks/useMediaViewer";
+import { useNavigate } from "react-router-dom";
 
 type DbGalleryImage = {
   src: string;
@@ -21,7 +21,7 @@ const GallerySection = () => {
   const [dbImages, setDbImages] = useState<DbGalleryImage[]>([]);
   const [hasDb, setHasDb] = useState(false);
   const [categories, setCategories] = useState<string[]>(["All", ...DEFAULT_GALLERY_CATEGORIES]);
-  const { open } = useMediaViewer();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !supabase) return;
@@ -47,7 +47,7 @@ const GallerySection = () => {
 
     const fetchImages = async () => {
       try {
-        const { data, error } = await supabase.from("gallery").select("*").order("order_index");
+        const { data, error } = await supabase.from("gallery").select("*").order("created_at", { ascending: false });
         if (!error && active) {
           const mapped: DbGalleryImage[] = (data || []).map((d) => ({
             src: d.image_url,
@@ -118,25 +118,50 @@ const GallerySection = () => {
   const images = hasDb ? dbImages : defaultImages;
   const filtered = filter === "All" ? images : images.filter((img) => img.cat === filter);
 
-  // Gallery grid on the page always shows exactly 2 items for the selected tab
-  const displayItems = filtered.slice(0, 2);
+  const [displayedIndices, setDisplayedIndices] = useState<number[]>([]);
+
+  // Reset indices when filtered list changes (category change)
+  useEffect(() => {
+    const initialIndices = Array.from(
+      { length: Math.min(4, filtered.length) },
+      (_, i) => i
+    );
+    setDisplayedIndices(initialIndices);
+  }, [filtered.length, filter]);
+
+  // Randomly rotate photos not currently displayed
+  useEffect(() => {
+    if (filtered.length <= 4) return;
+
+    const interval = setInterval(() => {
+      // Pick a random grid cell to replace (0, 1, 2, or 3)
+      const gridPosToReplace = Math.floor(Math.random() * 4);
+
+      setDisplayedIndices((prev) => {
+        if (prev.length === 0) return prev;
+
+        const allIndices = Array.from({ length: filtered.length }, (_, i) => i);
+        const offScreen = allIndices.filter((idx) => !prev.includes(idx));
+
+        if (offScreen.length === 0) return prev;
+
+        const newImgIdx = offScreen[Math.floor(Math.random() * offScreen.length)];
+        const next = [...prev];
+        next[gridPosToReplace] = newImgIdx;
+        return next;
+      });
+    }, 4000); // Swap a photo every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [filtered.length]);
+
+  const displayItems = displayedIndices.map((idx) => filtered[idx]).filter(Boolean);
 
   const handleImageClick = (clickedIndex: number) => {
-    // Map from the full list of filtered items so all category photos are accessible in the viewer
-    const mediaItems: MediaItem[] = filtered.map((img) => ({
-      src: img.src,
-      alt: `${img.cat} bike modification by Bikers Choice Kakinada`,
-      instagramUrl: img.instagram_post_url,
-      label: `${img.cat} - Custom Modification`,
-      beforeSrc: img.before_image_url,
-      beforeAlt: img.before_image_alt,
-      afterAlt: img.after_image_alt,
-      beforeLabel: img.before_label,
-      afterLabel: img.after_label,
-      comparisonEnabled: img.comparison_enabled,
-    }));
-
-    open(mediaItems, clickedIndex);
+    const item = filtered[clickedIndex];
+    if (item) {
+      navigate(`/galleryphotos?category=${encodeURIComponent(item.cat)}`);
+    }
   };
 
   return (
@@ -169,15 +194,18 @@ const GallerySection = () => {
         ))}
       </div>
 
-      {/* Grid layout - Always locked to 2 columns and 2 items */}
+      {/* Grid layout - 2 by 2 Grid */}
       <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto px-2">
         {displayItems.map((item, index) => {
-          const showMoreOverlay = index === 1 && filtered.length > 2;
+          const showMoreOverlay = index === 3 && filtered.length > 4;
 
           return (
-            <div
-              key={`${item.src}-${index}`}
-              onClick={() => handleImageClick(index)}
+            <motion.div
+              key={item.src}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              onClick={() => handleImageClick(displayedIndices[index])}
               className="relative rounded-xl overflow-hidden cursor-pointer group border border-border/50 hover:border-primary transition-all duration-300 shadow aspect-[4/5]"
             >
               <img
@@ -203,11 +231,11 @@ const GallerySection = () => {
                 </div>
               )}
 
-              {/* "+N More" overlay indicator */}
+              {/* "+N More" overlay indicator on the 4th photo */}
               {showMoreOverlay && (
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center text-center transition-colors group-hover:bg-background/70">
                   <span className="text-primary font-display font-extrabold text-lg md:text-xl">
-                    +{filtered.length - 2} More
+                    +{filtered.length - 4} More
                   </span>
                   <span className="text-muted-foreground font-heading font-semibold text-[10px] uppercase tracking-wider">
                     Tap to View
@@ -216,7 +244,7 @@ const GallerySection = () => {
               )}
               
               <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
+            </motion.div>
           );
         })}
       </div>

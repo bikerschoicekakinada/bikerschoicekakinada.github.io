@@ -16,13 +16,13 @@ export const DEFAULT_GALLERY_CATEGORIES = [
 ];
 
 export const DEFAULT_GALLERY_IMAGES = [
-  { src: bike1, cat: "LED & Neon" },
-  { src: bike2, cat: "Wraps & Paint" },
-  { src: bike3, cat: "Custom Builds" },
-  { src: bike4, cat: "LED & Neon" },
-  { src: bike5, cat: "Custom Builds" },
-  { src: helmets, cat: "Workshop" },
-  { src: tyres, cat: "Alloy & Tyre" },
+  { src: bike1, cat: "LED & Neon", instagram_post_url: "https://www.instagram.com/reel/C8XyZ1/", label: "Yamaha R15 V3 Neon Custom Wrap", compatible_bikes: ["R15", "Yamaha", "V3"] },
+  { src: bike2, cat: "Wraps & Paint", instagram_post_url: "https://www.instagram.com/reel/C8XyZ1/", label: "KTM Duke 200 Custom Painting", compatible_bikes: ["Duke", "KTM", "200"] },
+  { src: bike3, cat: "Custom Builds", instagram_post_url: "https://www.instagram.com/reel/C8XyZ1/", label: "Royal Enfield Himalayan Custom Build", compatible_bikes: ["Himalayan", "Royal Enfield", "RE"] },
+  { src: bike4, cat: "LED & Neon", label: "Bajaj Pulsar 220 LED Lighting Mod", compatible_bikes: ["Pulsar", "Pulsar 220", "Bajaj"] },
+  { src: bike5, cat: "Custom Builds", label: "KTM Duke 390 Stealth Edition Paint", compatible_bikes: ["Duke", "KTM", "390"] },
+  { src: helmets, cat: "Workshop", label: "Axxis Premium Custom Helmet Painting", compatible_bikes: [] },
+  { src: tyres, cat: "Alloy & Tyre", instagram_post_url: "https://www.instagram.com/reel/C8XyZ1/", label: "KTM Duke Alloy Wheel Neon Painting", compatible_bikes: ["Duke", "KTM", "Alloy"] },
 ];
 
 export const DEFAULT_SIGNATURE_WORK = [
