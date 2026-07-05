@@ -18,6 +18,10 @@ import HighlightText from "@/components/HighlightText";
 import type { SearchSuggestion } from "@/lib/searchEngine";
 import OptimizedImage from "@/components/OptimizedImage";
 import PinchToZoomImage from "@/components/PinchToZoomImage";
+import helmets from "@/assets/helmets.jpeg";
+import tyres from "@/assets/tyres.jpeg";
+import customBuild from "@/assets/bike3.jpg";
+import lighting from "@/assets/bike1.jpg";
 
 // ─── Skeleton Loader Component ──────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -98,6 +102,52 @@ const ProductCard = React.memo(({ item, index, highlightText = "", onClick }: Pr
 });
 
 ProductCard.displayName = "ProductCard";
+
+const getFallbackImage = (name: string): string | null => {
+  const n = name.toLowerCase();
+  if (n.includes("helmet")) return helmets;
+  if (n.includes("tyre") || n.includes("wheel")) return tyres;
+  if (n.includes("custom") || n.includes("build")) return customBuild;
+  if (n.includes("light") || n.includes("led")) return lighting;
+  return null;
+};
+
+const getCategoryStyles = (name: string) => {
+  const n = name.toLowerCase();
+  if (n.includes("part")) {
+    return {
+      gradient: "from-blue-600/20 via-slate-950 to-blue-900/10",
+      border: "hover:border-blue-500/60 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]",
+      textColor: "text-blue-400 group-hover:text-blue-300",
+    };
+  }
+  if (n.includes("light") || n.includes("led")) {
+    return {
+      gradient: "from-yellow-600/20 via-slate-950 to-amber-900/10",
+      border: "hover:border-amber-500/60 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]",
+      textColor: "text-amber-400 group-hover:text-amber-300",
+    };
+  }
+  if (n.includes("gear") || n.includes("ride") || n.includes("riding")) {
+    return {
+      gradient: "from-rose-600/20 via-slate-950 to-rose-900/10",
+      border: "hover:border-rose-500/60 hover:shadow-[0_0_15px_rgba(244,63,94,0.2)]",
+      textColor: "text-rose-400 group-hover:text-rose-300",
+    };
+  }
+  if (n.includes("exhaust") || n.includes("silencer")) {
+    return {
+      gradient: "from-orange-600/20 via-slate-950 to-red-900/10",
+      border: "hover:border-orange-500/60 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)]",
+      textColor: "text-orange-400 group-hover:text-orange-300",
+    };
+  }
+  return {
+    gradient: "from-cyan-600/20 via-slate-950 to-cyan-900/10",
+    border: "hover:border-primary/60 hover:shadow-[0_0_15px_rgba(34,211,238,0.2)]",
+    textColor: "text-cyan-400 group-hover:text-cyan-300",
+  };
+};
 
 // ─── Product Lightbox Viewer Component ───────────────────────────────────────
 interface ProductLightboxProps {
@@ -192,6 +242,8 @@ const Products = () => {
   const [debouncedSearch, setDebouncedSearch] = useState(queryParam);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedProductIndex, setSelectedProductIndex] = useState<number | null>(null);
+  
+  const isSearching = debouncedSearch.trim().length > 0;
 
   // Supabase hooks
   const { categories, loading: catsLoading, usingFallback } = useDeliveryCategories();
@@ -304,7 +356,6 @@ const Products = () => {
     setShowSuggestions(false);
   };
 
-  const isSearching = debouncedSearch.trim().length > 0;
   const showLoading = itemsLoading || (isSearching && searchLoading) || catsLoading;
 
   // Breadcrumb
@@ -504,6 +555,10 @@ const Products = () => {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {categories.map((cat, index) => {
+                  const fallbackImg = getFallbackImage(cat.name);
+                  const imageUrl = cat.icon_url || fallbackImg;
+                  const styles = getCategoryStyles(cat.name);
+
                   return (
                     <motion.button
                       key={cat.id}
@@ -511,21 +566,21 @@ const Products = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25, delay: index * 0.05 }}
                       onClick={() => navigate(`/products?cat=${cat.id}`)}
-                      className="group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:border-primary/60 hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] transition-all duration-300 text-left flex flex-col justify-between"
+                      className={`group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] transition-all duration-300 text-left flex flex-col justify-between ${styles.border}`}
                     >
-                      <div>
-                        {cat.icon_url ? (
-                          <div className="aspect-video h-32 sm:h-36 overflow-hidden">
+                      <div className="w-full">
+                        {imageUrl ? (
+                          <div className="aspect-video h-32 sm:h-36 overflow-hidden relative">
                             <OptimizedImage
-                              src={cat.icon_url}
+                              src={imageUrl}
                               alt={cat.name}
-                              className="group-hover:scale-105 transition-transform duration-500"
+                              className="group-hover:scale-105 transition-transform duration-500 absolute inset-0"
                               widthLimit={600}
                             />
                           </div>
                         ) : (
-                          <div className="w-full h-32 sm:h-36 bg-muted/40 flex items-center justify-center">
-                            <span className="text-3xl font-display text-muted-foreground">
+                          <div className={`w-full h-32 sm:h-36 bg-gradient-to-br ${styles.gradient} flex items-center justify-center relative`}>
+                            <span className={`text-3xl font-display font-black tracking-tighter opacity-15 select-none ${styles.textColor}`}>
                               {cat.name.charAt(0)}
                             </span>
                           </div>
