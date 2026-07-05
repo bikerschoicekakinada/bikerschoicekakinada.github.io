@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle, Phone, Mail, Instagram, Facebook, MapPin, Clock, Star } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -9,6 +10,33 @@ const ContactSection = () => {
     .split(/\n|\|/g)
     .map((line) => line.trim())
     .filter(Boolean);
+
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isMapLoaded) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          const timer = setTimeout(() => {
+            setIsMapLoaded(true);
+          }, 800);
+          return () => clearTimeout(timer);
+        }
+      },
+      { rootMargin: "150px" }
+    );
+
+    if (mapRef.current) {
+      observer.observe(mapRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isMapLoaded]);
 
   return (
     <section id="contact" className="py-16 px-4">
@@ -78,16 +106,33 @@ const ContactSection = () => {
         </a>
 
         {/* Map */}
-        <div className="rounded-xl overflow-hidden border border-border">
-          <iframe
-            src={settings.map_embed}
-            width="100%"
-            height="250"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title="Bikers Choice Kakinada Location" />
+        <div ref={mapRef} className="rounded-xl overflow-hidden border border-border h-[250px] relative bg-muted/20">
+          {isMapLoaded ? (
+            <iframe
+              src={settings.map_embed}
+              width="100%"
+              height="250"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Bikers Choice Kakinada Location"
+            />
+          ) : (
+            <button
+              onClick={() => setIsMapLoaded(true)}
+              className="w-full h-full flex flex-col items-center justify-center bg-card/60 backdrop-blur-sm group hover:bg-card/85 transition-all p-6 text-center select-none"
+            >
+              <div className="w-12 h-12 bg-primary/10 border border-primary/20 text-primary rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <MapPin size={22} className="animate-pulse" />
+              </div>
+              <p className="text-sm font-heading font-semibold text-foreground">Interactive Location Map</p>
+              <p className="text-xs text-muted-foreground/80 mt-1 mb-3">Click to load the live map of Bikers Choice, Kakinada</p>
+              <span className="text-[10px] uppercase tracking-wider text-primary font-bold border border-primary/20 rounded-full px-3 py-1 bg-primary/5">
+                Load Map
+              </span>
+            </button>
+          )}
         </div>
 
         <a

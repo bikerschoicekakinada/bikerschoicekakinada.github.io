@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -7,6 +7,7 @@ import {
   Phone,
   X,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { useDeliveryCategories } from "@/hooks/useDeliveryCategories";
 import { useDeliveryItems, type DeliveryItem } from "@/hooks/useDeliveryItems";
@@ -15,8 +16,10 @@ import { useSmartProductSearch } from "@/hooks/useSmartProductSearch";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import HighlightText from "@/components/HighlightText";
 import type { SearchSuggestion } from "@/lib/searchEngine";
+import OptimizedImage from "@/components/OptimizedImage";
+import PinchToZoomImage from "@/components/PinchToZoomImage";
 
-// ─── Skeleton loader ─────────────────────────────────────────────────────────
+// ─── Skeleton Loader Component ──────────────────────────────────────────────
 const SkeletonCard = () => (
   <div className="bg-card/40 border border-border/55 rounded-2xl overflow-hidden animate-pulse">
     <div className="aspect-video bg-muted/45 h-40 sm:h-48" />
@@ -27,28 +30,32 @@ const SkeletonCard = () => (
   </div>
 );
 
-// ─── Product Card Component ────────────────────────────────────────────────
+// ─── Product Card Component ──────────────────────────────────────────────────
 interface ProductCardProps {
   item: DeliveryItem;
   index: number;
   highlightText?: string;
+  onClick?: () => void;
 }
 
-const ProductCard = ({ item, index, highlightText = "" }: ProductCardProps) => {
+const ProductCard = React.memo(({ item, index, highlightText = "", onClick }: ProductCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.03 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.4) }}
       className="bg-card/35 border border-border/60 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-primary/50 transition-all duration-300 group shadow-md"
     >
       <div>
-        <div className="overflow-hidden h-40 sm:h-48 relative bg-muted/20">
-          <img
+        <div 
+          onClick={onClick}
+          className="overflow-hidden h-40 sm:h-48 relative bg-muted/20 cursor-pointer"
+        >
+          <OptimizedImage
             src={item.image_url}
             alt={item.label || "Product"}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
+            className="group-hover:scale-105 transition-transform duration-500 w-full h-full object-cover"
+            widthLimit={600}
           />
         </div>
         <div className="p-4 space-y-2">
@@ -72,7 +79,7 @@ const ProductCard = ({ item, index, highlightText = "" }: ProductCardProps) => {
         </div>
       </div>
       
-      {/* Action buttons directly on the card */}
+      {/* Action buttons */}
       <div className="p-4 pt-0 grid grid-cols-2 gap-2 border-t border-border/10 mt-2">
         <WhatsAppButton
           imageUrl={item.image_url}
@@ -88,6 +95,86 @@ const ProductCard = ({ item, index, highlightText = "" }: ProductCardProps) => {
       </div>
     </motion.div>
   );
+});
+
+ProductCard.displayName = "ProductCard";
+
+// ─── Product Lightbox Viewer Component ───────────────────────────────────────
+interface ProductLightboxProps {
+  item: DeliveryItem;
+  onClose: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+}
+
+const ProductLightbox = ({ item, onClose, onNext, onPrev }: ProductLightboxProps) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-4 md:p-6"
+    >
+      {/* Header */}
+      <div className="w-full max-w-4xl flex items-center justify-between z-10 border-b border-white/10 pb-3">
+        <div>
+          <h2 className="text-cyan-400 font-heading font-black text-sm md:text-base leading-tight">
+            {item.label}
+          </h2>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="w-full max-w-lg md:max-w-2xl flex-1 flex items-center justify-center relative my-4">
+        <button
+          onClick={onPrev}
+          className="absolute -left-2 md:-left-16 z-20 text-white/50 hover:text-white bg-black/40 hover:bg-black/60 p-3 rounded-full transition-all"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <button
+          onClick={onNext}
+          className="absolute -right-2 md:-right-16 z-20 text-white/50 hover:text-white bg-black/40 hover:bg-black/60 p-3 rounded-full transition-all"
+        >
+          <ChevronRight size={24} />
+        </button>
+
+        {/* Photo wrapper */}
+        <div className="w-full max-h-[72vh] aspect-[4/5] rounded-2xl overflow-hidden relative border border-white/15 bg-neutral-900 shadow-2xl">
+          <PinchToZoomImage
+            src={item.image_url}
+            alt={item.label}
+          />
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10 pt-4 z-10">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <WhatsAppButton
+            imageUrl={item.image_url}
+            itemLabel={item.label}
+            className="flex-1 sm:flex-none py-2.5 px-6 font-bold text-xs"
+          />
+          <a
+            href="tel:+918523876978"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white flex items-center justify-center gap-1.5 py-2.5 px-6 rounded-full text-xs font-heading font-bold transition-all shadow-md"
+          >
+            <Phone size={14} /> Call Us
+          </a>
+        </div>
+        <p className="text-[10px] text-white/40 font-heading">
+          Cycle products using arrow keys or tap side arrows
+        </p>
+      </div>
+    </motion.div>
+  );
 };
 
 // ─── Main Products Explorer Page ─────────────────────────────────────────────
@@ -95,39 +182,55 @@ const Products = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Navigation Parameters from URL
+  // Navigation parameters from URL
   const catParam = searchParams.get("cat");
   const subcatParam = searchParams.get("subcat");
   const queryParam = searchParams.get("q") || "";
 
-  // Local/URL synced search inputs
+  // Local state
   const [searchTerm, setSearchTerm] = useState(queryParam);
   const [debouncedSearch, setDebouncedSearch] = useState(queryParam);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedProductIndex, setSelectedProductIndex] = useState<number | null>(null);
 
   // Supabase hooks
   const { categories, loading: catsLoading, usingFallback } = useDeliveryCategories();
   const { subcategories, loading: subcatsLoading } = useDeliverySubcategories(catParam);
-  const { items, loading: itemsLoading } = useDeliveryItems(catParam, usingFallback, subcatParam);
-  const { allItems, searchResults, suggestions, search, loading: searchLoading } =
+  
+  // Destructure pagination state from hook
+  const { items, loading: itemsLoading, hasMore, loadMore } = useDeliveryItems(
+    catParam,
+    usingFallback,
+    subcatParam
+  );
+  
+  const { searchResults, suggestions, search, loading: searchLoading } =
     useSmartProductSearch(categories, usingFallback);
 
-  // Active navigation objects derived from parameters
+  // Active navigation items
   const selectedCategory = useMemo(() => categories.find((c) => c.id === catParam) || null, [categories, catParam]);
   const selectedSubcategory = useMemo(() => subcategories.find((s) => s.id === subcatParam) || null, [subcategories, subcatParam]);
 
-  // Debounce search input changes (300ms)
+  // Infinite scroll intersection observer target
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset Lightbox index on filter changes
+  useEffect(() => {
+    setSelectedProductIndex(null);
+  }, [catParam, subcatParam]);
+
+  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Trigger fuzzy matches when debounced search term or scoped category changes
+  // Execute fuzzy matches database-side
   useEffect(() => {
     search(debouncedSearch, catParam);
   }, [debouncedSearch, catParam, search]);
 
-  // Synchronize URL search parameters on changes
+  // Sync URL search params
   useEffect(() => {
     const params: Record<string, string> = {};
     if (debouncedSearch) params.q = debouncedSearch;
@@ -136,16 +239,48 @@ const Products = () => {
     setSearchParams(params, { replace: true });
   }, [debouncedSearch, catParam, subcatParam, setSearchParams]);
 
-  // Helper: Count items dynamically under Category or Subcategory
-  const getSubcategoryCount = useCallback(
-    (subcatId: string) => allItems.filter((item) => item.subcategory_id === subcatId && item.visibility !== false).length,
-    [allItems]
-  );
+  const activeProducts = isSearching ? searchResults : items;
 
-  const getCategoryCount = useCallback(
-    (categoryId: string) => allItems.filter((item) => item.category_id === categoryId && item.visibility !== false).length,
-    [allItems]
-  );
+  // Keyboard navigation for Product Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedProductIndex === null) return;
+      if (e.key === "ArrowRight") {
+        setSelectedProductIndex((prev) => (prev !== null && prev < activeProducts.length - 1 ? prev + 1 : 0));
+      } else if (e.key === "ArrowLeft") {
+        setSelectedProductIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : activeProducts.length - 1));
+      } else if (e.key === "Escape") {
+        setSelectedProductIndex(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedProductIndex, activeProducts.length]);
+
+  // Setup infinite scroll observer
+  useEffect(() => {
+    if (itemsLoading || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [itemsLoading, hasMore, loadMore]);
 
   const handleClearSearch = () => {
     setSearchTerm("");
@@ -172,7 +307,7 @@ const Products = () => {
   const isSearching = debouncedSearch.trim().length > 0;
   const showLoading = itemsLoading || (isSearching && searchLoading) || catsLoading;
 
-  // ─── Breadcrumb Navigation ────────────────────────────────────────────────
+  // Breadcrumb
   const Breadcrumb = () => (
     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 mb-6 flex-wrap font-heading">
       <button onClick={() => navigate("/")} className="hover:text-primary transition-colors font-semibold">
@@ -344,6 +479,7 @@ const Products = () => {
                     item={item}
                     index={i}
                     highlightText={debouncedSearch}
+                    onClick={() => setSelectedProductIndex(i)}
                   />
                 ))}
               </div>
@@ -355,7 +491,7 @@ const Products = () => {
         {!isSearching && !selectedCategory && (
           <div>
             <h1 className="text-xl sm:text-2xl font-display font-bold mb-1 neon-glow-cyan">
-              Product Categories
+              Product Catalog
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mb-8">
               Explore our structured motorcycle catalogs. Enquire or order directly via WhatsApp.
@@ -368,7 +504,6 @@ const Products = () => {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {categories.map((cat, index) => {
-                  const count = getCategoryCount(cat.id);
                   return (
                     <motion.button
                       key={cat.id}
@@ -376,16 +511,16 @@ const Products = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25, delay: index * 0.05 }}
                       onClick={() => navigate(`/products?cat=${cat.id}`)}
-                      className="group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:border-primary/60 hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all duration-300 text-left flex flex-col justify-between"
+                      className="group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:border-primary/60 hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] transition-all duration-300 text-left flex flex-col justify-between"
                     >
                       <div>
                         {cat.icon_url ? (
                           <div className="aspect-video h-32 sm:h-36 overflow-hidden">
-                            <img
+                            <OptimizedImage
                               src={cat.icon_url}
                               alt={cat.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              loading="lazy"
+                              className="group-hover:scale-105 transition-transform duration-500"
+                              widthLimit={600}
                             />
                           </div>
                         ) : (
@@ -406,9 +541,8 @@ const Products = () => {
                           )}
                         </div>
                       </div>
-                      <div className="p-4 pt-0 text-[10px] text-primary/80 font-heading font-bold flex justify-between items-center border-t border-border/10 mt-2">
-                        <span>{count} Products</span>
-                        <span className="group-hover:translate-x-1 transition-transform">Browse →</span>
+                      <div className="p-4 pt-0 text-[10px] text-primary/80 font-heading font-bold flex justify-end items-center border-t border-border/10 mt-2">
+                        <span className="group-hover:translate-x-1 transition-transform">Browse Category →</span>
                       </div>
                     </motion.button>
                   );
@@ -448,21 +582,29 @@ const Products = () => {
                   No products in this category yet. Please check back soon.
                 </div>
               ) : (
-                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-                  {items.map((item, i) => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      index={i}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((item, i) => (
+                      <ProductCard
+                        key={item.id}
+                        item={item}
+                        index={i}
+                        onClick={() => setSelectedProductIndex(i)}
+                      />
+                    ))}
+                  </div>
+                  {/* Infinite scroll pagination loader */}
+                  <div ref={loaderRef} className="h-20 w-full flex items-center justify-center pt-6">
+                    {itemsLoading && (
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    )}
+                  </div>
+                </>
               )
             ) : (
               // Structured View: Render only Subcategory cards
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {subcategories.map((sub, index) => {
-                  const count = getSubcategoryCount(sub.id);
                   return (
                     <motion.button
                       key={sub.id}
@@ -470,16 +612,16 @@ const Products = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25, delay: index * 0.05 }}
                       onClick={() => navigate(`/products?cat=${selectedCategory.id}&subcat=${sub.id}`)}
-                      className="group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:border-primary/65 hover:shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all duration-300 text-left flex flex-col justify-between"
+                      className="group bg-card/35 border border-border/60 rounded-2xl overflow-hidden hover:border-primary/65 hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] transition-all duration-300 text-left flex flex-col justify-between"
                     >
                       <div>
                         {sub.cover_image_url ? (
                           <div className="aspect-video h-32 sm:h-36 overflow-hidden">
-                            <img
+                            <OptimizedImage
                               src={sub.cover_image_url}
                               alt={sub.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              loading="lazy"
+                              className="group-hover:scale-105 transition-transform duration-500"
+                              widthLimit={600}
                             />
                           </div>
                         ) : (
@@ -500,9 +642,8 @@ const Products = () => {
                           )}
                         </div>
                       </div>
-                      <div className="p-4 pt-0 text-[10px] text-primary/80 font-heading font-bold flex justify-between items-center border-t border-border/10 mt-2">
-                        <span>{count} Products</span>
-                        <span className="group-hover:translate-x-1 transition-transform">Browse →</span>
+                      <div className="p-4 pt-0 text-[10px] text-primary/80 font-heading font-bold flex justify-end items-center border-t border-border/10 mt-2">
+                        <span className="group-hover:translate-x-1 transition-transform">View Products →</span>
                       </div>
                     </motion.button>
                   );
@@ -531,28 +672,49 @@ const Products = () => {
               <ArrowLeft size={13} /> Back to Subcategories
             </button>
 
-            {itemsLoading ? (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
-              </div>
-            ) : items.length === 0 ? (
+            {items.length === 0 && !itemsLoading ? (
               <div className="text-center py-20 text-muted-foreground text-sm font-semibold">
                 No products in this subcategory yet. Please check back soon.
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-                {items.map((item, i) => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    index={i}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+                  {items.map((item, i) => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      onClick={() => setSelectedProductIndex(i)}
+                    />
+                  ))}
+                </div>
+                {/* Infinite scroll observer loader target */}
+                <div ref={loaderRef} className="h-20 w-full flex items-center justify-center pt-6">
+                  {itemsLoading && (
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
       </main>
+
+      {/* Lightbox Overlay */}
+      <AnimatePresence>
+        {selectedProductIndex !== null && activeProducts[selectedProductIndex] && (
+          <ProductLightbox
+            item={activeProducts[selectedProductIndex]}
+            onClose={() => setSelectedProductIndex(null)}
+            onNext={() =>
+              setSelectedProductIndex((prev) => (prev !== null && prev < activeProducts.length - 1 ? prev + 1 : 0))
+            }
+            onPrev={() =>
+              setSelectedProductIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : activeProducts.length - 1))
+            }
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

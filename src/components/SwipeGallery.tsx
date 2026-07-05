@@ -2,6 +2,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
 import type { ReactNode } from "react";
 import "./SwipeGallery.css";
+import OptimizedImage from "./OptimizedImage";
 
 interface SwipeGalleryProps {
   images: string[];
@@ -53,10 +54,10 @@ const SwipeGallery = ({
                 renderSlide(image, index)
               ) : (
                 <div className="swipe-gallery__slide-inner">
-                  <img
+                  <OptimizedImage
                     src={image}
                     alt={alts?.[index] || `Slide ${index + 1}`}
-                    loading="lazy"
+                    widthLimit={600}
                   />
                 </div>
               )}

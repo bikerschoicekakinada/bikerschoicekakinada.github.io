@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ShoppingBag, ArrowRight } from "lucide-react";
 import { useDeliveryCategories } from "@/hooks/useDeliveryCategories";
+import OptimizedImage from "./OptimizedImage";
 
 const OnlineDelivery = () => {
   const navigate = useNavigate();
@@ -53,11 +54,11 @@ const OnlineDelivery = () => {
                 className="cursor-pointer group relative overflow-hidden rounded-xl border border-border bg-card/45 transition-all duration-300 hover:border-primary/60 hover:shadow-[0_0_15px_rgba(34,211,238,0.15)] flex flex-col h-24 sm:h-36 md:h-40"
               >
                 {cat.icon_url ? (
-                  <img
+                  <OptimizedImage
                     src={cat.icon_url}
                     alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 absolute inset-0 opacity-75 group-hover:opacity-95"
-                    loading="lazy"
+                    className="group-hover:scale-105 transition-transform duration-500 absolute inset-0 opacity-75 group-hover:opacity-95"
+                    widthLimit={600}
                   />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center absolute inset-0">

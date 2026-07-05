@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, Plus, RefreshCw, Image as ImageIcon, X, Instagram } from "lucide-react";
 import { DEFAULT_SIGNATURE_WORK } from "@/lib/mediaDefaults";
+import { compressImageClient } from "@/lib/imageCompression";
 
 type SignatureItem = {
   id: string;
@@ -93,9 +94,11 @@ const AdminSignatureWork = () => {
   }
 
   const uploadImage = async (file: File, prefix: string): Promise<string | null> => {
+    const compressed = await compressImageClient(file);
     const ext = file.name.split(".").pop();
-    const path = `signature/${prefix}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("uploads").upload(path, file);
+    const finalExt = file.type.startsWith("image/") ? "jpg" : ext;
+    const path = `signature/${prefix}_${Date.now()}.${finalExt}`;
+    const { error } = await supabase.storage.from("uploads").upload(path, compressed);
     if (error) { toast.error("Upload failed: " + error.message); return null; }
     const { data } = supabase.storage.from("uploads").getPublicUrl(path);
     return data.publicUrl;

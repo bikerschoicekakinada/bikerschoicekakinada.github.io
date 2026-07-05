@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, MessageCircle, Instagram, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Phone } from "lucide-react";
@@ -7,6 +7,8 @@ import FooterSection from "@/components/FooterSection";
 import Seo from "@/components/Seo";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { DEFAULT_GALLERY_CATEGORIES, DEFAULT_GALLERY_IMAGES } from "@/lib/mediaDefaults";
+import OptimizedImage from "@/components/OptimizedImage";
+import PinchToZoomImage from "@/components/PinchToZoomImage";
 
 type GalleryItem = {
   id: string;
@@ -219,10 +221,9 @@ const Lightbox = ({ item, onClose, onNext, onPrev }: LightboxProps) => {
                 displayName={displayName}
               />
             ) : (
-              <img
+              <PinchToZoomImage
                 src={item.src}
                 alt={displayName}
-                className="w-full h-full object-cover pointer-events-none"
               />
             )}
           </div>
@@ -274,6 +275,47 @@ const Lightbox = ({ item, onClose, onNext, onPrev }: LightboxProps) => {
   );
 };
 
+// ─── Memoized Gallery Card Component ─────────────────────────────────────────
+interface GalleryCardProps {
+  item: GalleryItem;
+  onClick: () => void;
+}
+
+const GalleryCard = React.memo(({ item, onClick }: GalleryCardProps) => {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-card border border-border/50 rounded-xl p-2 flex flex-col justify-between hover:border-primary/40 cursor-pointer shadow aspect-[4/5] group overflow-hidden relative"
+      onClick={onClick}
+    >
+      <OptimizedImage
+        src={item.src}
+        alt={`${item.cat} custom build`}
+        className="rounded-lg group-hover:scale-105 transition-transform duration-500"
+        widthLimit={600}
+      />
+
+      {/* Name Overlay */}
+      <div className="absolute inset-x-2 bottom-2 bg-black/70 backdrop-blur-sm py-2 px-3 rounded-lg text-center border border-white/5 transition-opacity duration-300">
+        <p className="text-[10px] sm:text-xs font-heading font-black text-cyan-400 truncate uppercase tracking-wide">
+          {item.label || "Custom Modification"}
+        </p>
+      </div>
+
+      {/* Watch Reel Indicator Badge */}
+      {item.instagram_post_url && (
+        <div className="absolute top-4 right-4 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-md z-10 flex items-center gap-1">
+          <Instagram size={8} /> Watch
+        </div>
+      )}
+    </motion.div>
+  );
+});
+
+GalleryCard.displayName = "GalleryCard";
+
 // ─── Main Gallery Showcase Page ──────────────────────────────────────────────
 export default function GalleryPage() {
   const navigate = useNavigate();
@@ -285,6 +327,11 @@ export default function GalleryPage() {
   const [hasDb, setHasDb] = useState(false);
   const [categories, setCategories] = useState<string[]>(["All", ...DEFAULT_GALLERY_CATEGORIES]);
   const [loading, setLoading] = useState(true);
+
+  // Database Pagination states
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Grid Columns State (1 to 6 columns)
   const [columns, setColumns] = useState(3);
@@ -298,6 +345,7 @@ export default function GalleryPage() {
   // Pinch Gesture tracking ref
   const touchStartDist = useRef<number | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const isFetchingRef = useRef(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -415,24 +463,85 @@ export default function GalleryPage() {
       .map((entry) => entry.item);
   };
 
-  const filteredImages = getFilteredAndSortedImages();
+  const filteredImages = hasDb ? dbImages : getFilteredAndSortedImages();
 
-
-
-  // Sync state filter with URL parameters
-  useEffect(() => {
-    setFilter(catParam);
-    setVisibleCount(20); // Reset page load count when category filter shifts
-  }, [catParam]);
-
-  // Supabase Data Sync
-  useEffect(() => {
+  // Load a single page of gallery images
+  const loadGalleryPage = useCallback(async (pageNum: number, currentFilter: string, currentQuery: string, reset = false) => {
     if (!isSupabaseConfigured() || !supabase) {
       setLoading(false);
       return;
     }
 
-    let active = true;
+    // Guard against concurrent page fetches (prevent double loading and React infinite loops)
+    if (isFetchingRef.current && !reset) return;
+    isFetchingRef.current = true;
+
+    if (reset) {
+      setLoading(true);
+      setPage(0);
+      setHasMore(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const from = pageNum * 24;
+      const to = from + 23;
+
+      let query = supabase
+        .from("gallery")
+        .select("id, image_url, category, before_image_url, comparison_enabled, instagram_post_url, label, compatible_bikes")
+        .order("created_at", { ascending: false });
+
+      if (currentFilter && currentFilter !== "All") {
+        query = query.eq("category", currentFilter);
+      }
+
+      if (currentQuery.trim()) {
+        const q = currentQuery.trim().toLowerCase();
+        query = query.or(`label.ilike.%${q}%,category.ilike.%${q}%`);
+      }
+
+      const { data, error } = await query.range(from, to);
+
+      if (!error && data) {
+        const mapped: GalleryItem[] = data.map((d) => ({
+          id: d.id,
+          src: d.image_url,
+          cat: d.category,
+          before_image_url: d.before_image_url ?? null,
+          comparison_enabled: d.comparison_enabled ?? false,
+          instagram_post_url: d.instagram_post_url ?? null,
+          label: d.label ?? "",
+          compatible_bikes: d.compatible_bikes ?? [],
+        }));
+
+        setDbImages((prev) => {
+          const next = reset ? mapped : [...prev, ...mapped];
+          return next;
+        });
+        setHasDb(reset ? mapped.length > 0 : true);
+        setHasMore(mapped.length === 24);
+        setPage(pageNum);
+      } else {
+        setHasMore(false); // Stop paginating if database error occurs
+      }
+    } catch (err) {
+      console.error("[GalleryPage] Load page failed:", err);
+      setHasMore(false); // Stop paginating on exception
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Fetch Categories on Mount
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase) {
+      setLoading(false);
+      return;
+    }
 
     const fetchCategories = async () => {
       try {
@@ -441,7 +550,7 @@ export default function GalleryPage() {
           .select("name")
           .order("order_index");
 
-        if (data && data.length > 0 && active) {
+        if (data && data.length > 0) {
           setCategories(["All", ...data.map((c) => c.name)]);
         }
       } catch (err) {
@@ -449,41 +558,23 @@ export default function GalleryPage() {
       }
     };
 
-    const fetchImages = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("gallery")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!error && active) {
-          const mapped: GalleryItem[] = (data || []).map((d) => ({
-            id: d.id,
-            src: d.image_url,
-            cat: d.category,
-            before_image_url: d.before_image_url ?? null,
-            comparison_enabled: d.comparison_enabled ?? false,
-            instagram_post_url: d.instagram_post_url ?? null,
-            label: d.label ?? "",
-            compatible_bikes: d.compatible_bikes ?? [],
-          }));
-          setDbImages(mapped);
-          if (mapped.length > 0) setHasDb(true);
-        }
-      } catch (err) {
-        console.error("[GalleryPage] Images load failed:", err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
     fetchCategories();
-    fetchImages();
-
-    return () => {
-      active = false;
-    };
   }, []);
+
+  // Sync category filter from URL search params
+  useEffect(() => {
+    setFilter(catParam);
+    setVisibleCount(20); // Reset page load count for fallback
+  }, [catParam]);
+
+  // Debounced search query sync
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    const handler = setTimeout(() => {
+      loadGalleryPage(0, filter, searchQuery, true);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, filter, loadGalleryPage]);
 
   // Auto-open lightbox if "?id=..." is in the URL
   useEffect(() => {
@@ -499,12 +590,16 @@ export default function GalleryPage() {
 
   // Infinite Scroll Trigger using IntersectionObserver
   useEffect(() => {
-    if (loading) return;
+    if (loading || !hasMore || loadingMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + 20, filteredImages.length));
+          if (hasDb) {
+            loadGalleryPage(page + 1, filter, searchQuery, false);
+          } else {
+            setVisibleCount((prev) => Math.min(prev + 20, filteredImages.length));
+          }
         }
       },
       { threshold: 0.1, rootMargin: "100px" }
@@ -515,7 +610,7 @@ export default function GalleryPage() {
     }
 
     return () => observer.disconnect();
-  }, [loading, visibleCount, filter, filteredImages.length]);
+  }, [loading, hasMore, loadingMore, hasDb, page, filter, searchQuery, loadGalleryPage, filteredImages.length]);
 
   // Touch listener to handle pinch gestures to change columns count (zoom in/out)
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -572,8 +667,8 @@ export default function GalleryPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex, filteredImages.length]);
 
-  // Slice list based on visibleCount for infinite scroll
-  const loadedImages = filteredImages.slice(0, visibleCount);
+  // Slice list based on visibleCount for infinite scroll (only slice for fallback)
+  const loadedImages = hasDb ? dbImages : filteredImages.slice(0, visibleCount);
 
   // Map columns count to tailwind grid-cols class names
   const gridColumnClass = {
@@ -700,35 +795,11 @@ export default function GalleryPage() {
             className={`grid ${gridColumnClass} gap-4 transition-all duration-300`}
           >
             {loadedImages.map((item, idx) => (
-              <motion.div
+              <GalleryCard
                 key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-card border border-border/50 rounded-xl p-2 flex flex-col justify-between hover:border-primary/40 cursor-pointer shadow aspect-[4/5] group overflow-hidden relative"
+                item={item}
                 onClick={() => setSelectedIndex(idx)}
-              >
-                <img
-                  src={item.src}
-                  alt={`${item.cat} custom build`}
-                  className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-
-                {/* Name Overlay (Shows name only, other details hidden until click) */}
-                <div className="absolute inset-x-2 bottom-2 bg-black/70 backdrop-blur-sm py-2 px-3 rounded-lg text-center border border-white/5 transition-opacity duration-300">
-                  <p className="text-[10px] sm:text-xs font-heading font-black text-cyan-400 truncate uppercase tracking-wide">
-                    {item.label || "Custom Modification"}
-                  </p>
-                </div>
-
-                {/* Watch Reel Indicator Badge */}
-                {item.instagram_post_url && (
-                  <div className="absolute top-4 right-4 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-md z-10 flex items-center gap-1">
-                    <Instagram size={8} /> Watch
-                  </div>
-                )}
-              </motion.div>
+              />
             ))}
           </div>
         )}

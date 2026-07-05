@@ -5,6 +5,7 @@ import SwipeGallery from "./SwipeGallery";
 import BeforeAfterImage from "./BeforeAfterImage";
 import { DEFAULT_SIGNATURE_WORK } from "@/lib/mediaDefaults";
 import { useMediaViewer, MediaItem } from "@/hooks/useMediaViewer";
+import OptimizedImage from "./OptimizedImage";
 
 type WorkItem = {
   id: string;
@@ -32,7 +33,10 @@ const SignatureWork = () => {
 
     const fetchWorks = async () => {
       try {
-        const { data, error } = await supabase.from("signature_work").select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase
+          .from("signature_work")
+          .select("id, image_url, label, order_index, before_image_url, before_image_alt, after_image_alt, before_label, after_label, comparison_enabled, instagram_post_url")
+          .order("created_at", { ascending: false });
         if (!error && active) {
           const mapped: WorkItem[] = (data || []).map((d) => ({
             id: d.id,
@@ -156,11 +160,12 @@ const SignatureWork = () => {
               className="relative rounded-xl overflow-hidden border border-border neon-border-cyan group cursor-pointer"
               onClick={() => handleWorkClick(index)}
             >
-              <img
+              <OptimizedImage
                 src={image}
                 alt={work?.label || "Signature work"}
-                className="w-full aspect-[4/5] object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
+                className="transition-transform duration-500 group-hover:scale-110"
+                wrapperClassName="w-full aspect-[4/5]"
+                widthLimit={500}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/80 to-transparent p-4">
                 <span className="font-heading font-semibold text-sm text-primary">{work?.label}</span>

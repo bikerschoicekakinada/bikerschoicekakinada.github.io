@@ -1,26 +1,41 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ScrollToHash from "@/components/ScrollToHash";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Keep landing page & 404 static to ensure immediate load
 import Index from "./pages/Index";
-import DeliveryPage from "./pages/Delivery";
-import ContactPage from "./pages/Contact";
-import AboutPage from "./pages/About";
-import CustomWorkPage from "./pages/CustomWork";
-import BikeAccessoriesCityPage from "./pages/BikeAccessoriesCity";
 import NotFound from "./pages/NotFound";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import Products from "./pages/Products";
-import Gallery from "./pages/Gallery";
 
 import { MediaViewerProvider } from "@/hooks/useMediaViewer";
 import MediaViewer from "@/components/MediaViewer/MediaViewer";
 import ProtectedRoute from "@/components/admin/ProtectedRoute";
 
+// Lazy load other heavy components
+const DeliveryPage = lazy(() => import("./pages/Delivery"));
+const ContactPage = lazy(() => import("./pages/Contact"));
+const AboutPage = lazy(() => import("./pages/About"));
+const CustomWorkPage = lazy(() => import("./pages/CustomWork"));
+const BikeAccessoriesCityPage = lazy(() => import("./pages/BikeAccessoriesCity"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const Products = lazy(() => import("./pages/Products"));
+const Gallery = lazy(() => import("./pages/Gallery"));
+
 const queryClient = new QueryClient();
+
+// Premium, centered route loader
+const RouteLoader = () => (
+  <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+    <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+    <span className="text-[10px] font-heading font-black text-muted-foreground uppercase tracking-widest animate-pulse">
+      Loading...
+    </span>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,93 +46,95 @@ const App = () => (
         <MediaViewer />
         <BrowserRouter>
           <ScrollToHash />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/galleryphotos" element={<Gallery />} />
-          <Route path="/delivery" element={<DeliveryPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/custom-work" element={<CustomWorkPage />} />
+          <Suspense fallback={<RouteLoader />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/galleryphotos" element={<Gallery />} />
+              <Route path="/delivery" element={<DeliveryPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/custom-work" element={<CustomWorkPage />} />
 
-          <Route
-            path="/bike-accessories-kakinada"
-            element={
-              <BikeAccessoriesCityPage
-                cityName="Kakinada"
-                title="Bike Accessories in Kakinada | Helmets & Riding Gear | Bikers Choice"
-                paragraph="Bikers Choice is a premium bike accessories and motorcycle modification shop in Kakinada offering helmets, riding gear, fog lights, tyres and custom motorcycle upgrades. Riders can visit our store in Kakinada or order accessories online with courier delivery across Andhra Pradesh including Vizag, Rajahmundry and Tuni."
-                canonicalPath="/bike-accessories-kakinada"
+              <Route
+                path="/bike-accessories-kakinada"
+                element={
+                  <BikeAccessoriesCityPage
+                    cityName="Kakinada"
+                    title="Bike Accessories in Kakinada | Helmets & Riding Gear | Bikers Choice"
+                    paragraph="Bikers Choice is a premium bike accessories and motorcycle modification shop in Kakinada offering helmets, riding gear, fog lights, tyres and custom motorcycle upgrades. Riders can visit our store in Kakinada or order accessories online with courier delivery across Andhra Pradesh including Vizag, Rajahmundry and Tuni."
+                    canonicalPath="/bike-accessories-kakinada"
+                  />
+                }
               />
-            }
-          />
-          <Route
-            path="/bike-accessories-vizag"
-            element={
-              <BikeAccessoriesCityPage
-                cityName="Vizag"
-                title="Bike Accessories in Vizag | Helmets & Riding Gear | Bikers Choice"
-                paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Visakhapatnam with courier delivery from our Kakinada store."
-                canonicalPath="/bike-accessories-vizag"
+              <Route
+                path="/bike-accessories-vizag"
+                element={
+                  <BikeAccessoriesCityPage
+                    cityName="Vizag"
+                    title="Bike Accessories in Vizag | Helmets & Riding Gear | Bikers Choice"
+                    paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Visakhapatnam with courier delivery from our Kakinada store."
+                    canonicalPath="/bike-accessories-vizag"
+                  />
+                }
               />
-            }
-          />
-          <Route
-            path="/bike-accessories-rajahmundry"
-            element={
-              <BikeAccessoriesCityPage
-                cityName="Rajahmundry"
-                title="Bike Accessories in Rajahmundry | Helmets & Riding Gear | Bikers Choice"
-                paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Rajahmundry with courier delivery from our Kakinada store."
-                canonicalPath="/bike-accessories-rajahmundry"
+              <Route
+                path="/bike-accessories-rajahmundry"
+                element={
+                  <BikeAccessoriesCityPage
+                    cityName="Rajahmundry"
+                    title="Bike Accessories in Rajahmundry | Helmets & Riding Gear | Bikers Choice"
+                    paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Rajahmundry with courier delivery from our Kakinada store."
+                    canonicalPath="/bike-accessories-rajahmundry"
+                  />
+                }
               />
-            }
-          />
-          <Route
-            path="/bike-accessories-tuni"
-            element={
-              <BikeAccessoriesCityPage
-                cityName="Tuni"
-                title="Bike Accessories in Tuni | Helmets & Riding Gear | Bikers Choice"
-                paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Tuni with courier delivery from our Kakinada store."
-                canonicalPath="/bike-accessories-tuni"
+              <Route
+                path="/bike-accessories-tuni"
+                element={
+                  <BikeAccessoriesCityPage
+                    cityName="Tuni"
+                    title="Bike Accessories in Tuni | Helmets & Riding Gear | Bikers Choice"
+                    paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Tuni with courier delivery from our Kakinada store."
+                    canonicalPath="/bike-accessories-tuni"
+                  />
+                }
               />
-            }
-          />
-          <Route
-            path="/bike-accessories-samalkot"
-            element={
-              <BikeAccessoriesCityPage
-                cityName="Samalkot"
-                title="Bike Accessories in Samalkot | Helmets & Riding Gear | Bikers Choice"
-                paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Samalkot with courier delivery from our Kakinada store."
-                canonicalPath="/bike-accessories-samalkot"
+              <Route
+                path="/bike-accessories-samalkot"
+                element={
+                  <BikeAccessoriesCityPage
+                    cityName="Samalkot"
+                    title="Bike Accessories in Samalkot | Helmets & Riding Gear | Bikers Choice"
+                    paragraph="Bikers Choice supplies premium motorcycle helmets, riding gear and bike accessories for riders in Samalkot with courier delivery from our Kakinada store."
+                    canonicalPath="/bike-accessories-samalkot"
+                  />
+                }
               />
-            }
-          />
 
-          <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/*"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
       </MediaViewerProvider>
     </TooltipProvider>
   </QueryClientProvider>

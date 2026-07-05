@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, Plus, RefreshCw, Image as ImageIcon, X, Instagram, Edit3, GripVertical, FolderPlus } from "lucide-react";
 import { DEFAULT_GALLERY_CATEGORIES, DEFAULT_GALLERY_IMAGES } from "@/lib/mediaDefaults";
+import { compressImageClient } from "@/lib/imageCompression";
 
 type GalleryItem = {
   id: string;
@@ -155,9 +156,11 @@ const AdminGallery = () => {
   const showFallback = loaded && items.length === 0;
 
   const uploadFile = async (file: File, prefix: string): Promise<string | null> => {
+    const compressed = await compressImageClient(file);
     const ext = file.name.split(".").pop();
-    const path = `gallery/${prefix}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("uploads").upload(path, file);
+    const finalExt = file.type.startsWith("image/") ? "jpg" : ext;
+    const path = `gallery/${prefix}_${Date.now()}.${finalExt}`;
+    const { error } = await supabase.storage.from("uploads").upload(path, compressed);
     if (error) {
       toast.error("Upload failed: " + error.message);
       return null;

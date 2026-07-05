@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { DEFAULT_DELIVERY_CATEGORIES, DEFAULT_DELIVERY_ITEMS } from "@/lib/mediaDefaults";
+import { compressImageClient } from "@/lib/imageCompression";
 
 type Category = {
   id: string;
@@ -81,6 +82,12 @@ const AdminDelivery = () => {
   const [activeTab, setActiveTab] = useState<"items" | "subcategories">("items");
   const [filterSubcatId, setFilterSubcatId] = useState<string | null>("all");
   const [editSubcategories, setEditSubcategories] = useState<Subcategory[]>([]);
+
+  // Quick Add Product State
+  const [quickName, setQuickName] = useState("");
+  const [quickBikes, setQuickBikes] = useState("");
+  const [quickFile, setQuickFile] = useState<File | null>(null);
+  const [quickPreview, setQuickPreview] = useState<string | null>(null);
 
   const configured = isSupabaseConfigured() && supabase;
 
@@ -180,9 +187,11 @@ const AdminDelivery = () => {
   // Helper file uploader
   const handleUploadImage = async (pathPrefix: string, file: File): Promise<string | null> => {
     try {
+      const compressed = await compressImageClient(file);
       const ext = file.name.split(".").pop();
-      const path = `${pathPrefix}/${Date.now()}.${ext}`;
-      const { error } = await supabase!.storage.from("uploads").upload(path, file);
+      const finalExt = file.type.startsWith("image/") ? "jpg" : ext;
+      const path = `${pathPrefix}/${Date.now()}.${finalExt}`;
+      const { error } = await supabase!.storage.from("uploads").upload(path, compressed);
       if (error) {
         toast.error("Upload failed: " + error.message);
         return null;
@@ -379,6 +388,49 @@ const AdminDelivery = () => {
     }
     setUploading(false);
     e.target.value = "";
+  };
+
+  const handleQuickAddSubmit = async () => {
+    if (!quickName.trim() || !quickFile || !selectedCat) return;
+    setUploading(true);
+    const toastId = toast.loading("Uploading product image...");
+    try {
+      const url = await handleUploadImage(`delivery/${selectedCat.id}`, quickFile);
+      if (url) {
+        toast.loading("Saving product details...", { id: toastId });
+        const subcatId = filterSubcatId !== "all" && filterSubcatId !== "unassigned" ? filterSubcatId : null;
+        
+        const { error } = await supabase!.from("delivery_items").insert({
+          category_id: selectedCat.id,
+          subcategory_id: subcatId,
+          image_url: url,
+          label: quickName.trim(),
+          compatible_bikes: quickBikes.split(",").map(s => s.trim()).filter(Boolean),
+          order_index: items.length,
+          availability: true,
+          visibility: true,
+          featured: false,
+        });
+
+        if (error) {
+          toast.error("Failed to add product: " + error.message, { id: toastId });
+        } else {
+          toast.success("Product added successfully in under a minute!", { id: toastId });
+          setQuickName("");
+          setQuickBikes("");
+          setQuickFile(null);
+          setQuickPreview(null);
+          await fetchItems(selectedCat.id);
+        }
+      } else {
+        toast.error("Failed to upload product image", { id: toastId });
+      }
+    } catch (err) {
+      console.error("[AdminDelivery] Quick Add product failed:", err);
+      toast.error("An error occurred during quick add", { id: toastId });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const deleteItem = async (id: string) => {
@@ -753,18 +805,6 @@ const AdminDelivery = () => {
               <p className="text-[11px] text-muted-foreground mt-0.5">{selectedCat.description}</p>
             )}
           </div>
-          {activeTab === "items" && (
-            <label className={`flex items-center gap-1.5 bg-primary text-primary-foreground px-3.5 py-2 rounded-full text-xs font-heading font-bold cursor-pointer ${uploading ? "opacity-50" : ""}`}>
-              <Plus size={14} /> {activeSubcatName ? `Add Product to ${activeSubcatName}` : "Add Product"}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => addProduct(e, filterSubcatId !== "all" && filterSubcatId !== "unassigned" ? filterSubcatId : null)}
-                className="hidden"
-                disabled={uploading}
-              />
-            </label>
-          )}
         </div>
 
         {/* Tabs: Items | Subcategories */}
@@ -855,18 +895,6 @@ const AdminDelivery = () => {
                     {/* Action controls */}
                     <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 w-full sm:w-auto border-t sm:border-t-0 border-border/10 pt-3 sm:pt-0">
                       <div className="flex items-center gap-2">
-                        {/* Add product file selector */}
-                        <label className={`flex items-center gap-1 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-xl text-xs font-heading font-bold cursor-pointer transition-colors ${uploading ? "opacity-50" : ""}`}>
-                          <Plus size={12} /> Add Product Here
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => addProduct(e, sub.id)}
-                            className="hidden"
-                            disabled={uploading}
-                          />
-                        </label>
-
                         {/* View products inside this subcategory */}
                         <button
                           onClick={() => {
@@ -938,6 +966,76 @@ const AdminDelivery = () => {
                     );
                   })}
                 </select>
+              </div>
+            </div>
+
+            {/* Quick Add Product Card */}
+            <div className="bg-card border border-primary/20 rounded-xl p-4 mb-6 shadow-md">
+              <h3 className="text-xs font-heading font-black text-primary uppercase tracking-wider mb-3">
+                ⚡ Quick Add Product (Under 1 Minute)
+              </h3>
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                {/* Image uploader thumbnail */}
+                <div className="relative border border-dashed border-border hover:border-primary rounded-lg w-24 h-24 overflow-hidden bg-muted/40 shrink-0 flex flex-col items-center justify-center cursor-pointer transition-colors">
+                  {quickPreview ? (
+                    <>
+                      <img src={quickPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <span className="text-[9px] font-heading font-bold text-white">Change</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-2 flex flex-col items-center">
+                      <ImagePlus size={20} className="text-muted-foreground mb-1" />
+                      <span className="text-[8px] leading-tight text-muted-foreground font-heading font-bold">Select Photo</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.length) {
+                        const file = e.target.files[0];
+                        setQuickFile(file);
+                        setQuickPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </div>
+
+                {/* Form fields */}
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                  <div>
+                    <label className="text-[9px] font-heading font-bold text-muted-foreground uppercase block mb-1 font-heading font-bold">Product Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Axxis Draken Helmet"
+                      value={quickName}
+                      onChange={(e) => setQuickName(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary font-heading font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-heading font-bold text-muted-foreground uppercase block mb-1 font-heading font-bold">Bike Compatibility (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. R15, MT15, Pulsar"
+                      value={quickBikes}
+                      onChange={(e) => setQuickBikes(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary font-heading font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  onClick={handleQuickAddSubmit}
+                  disabled={uploading || !quickName.trim() || !quickFile}
+                  className="bg-primary hover:opacity-90 disabled:opacity-50 text-primary-foreground text-xs font-heading font-bold px-5 py-2.5 rounded-lg h-9 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap w-full md:w-auto"
+                >
+                  {uploading ? "Uploading..." : <span className="flex items-center gap-1.5"><Plus size={14} /> Upload Product</span>}
+                </button>
               </div>
             </div>
 

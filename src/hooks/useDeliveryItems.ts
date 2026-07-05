@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { DEFAULT_DELIVERY_ITEMS } from "@/lib/mediaDefaults";
 
@@ -33,8 +33,13 @@ export function useDeliveryItems(
   const [items, setItems] = useState<DeliveryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const isFetchingRef = useRef(false);
 
-  useEffect(() => {
+  const PAGE_SIZE = 24;
+
+  const fetchItems = useCallback(async (pageNum: number, reset = false) => {
     if (!categoryId) {
       setItems([]);
       return;
@@ -42,31 +47,30 @@ export function useDeliveryItems(
 
     if (useFallback) {
       const fallbackItems = DEFAULT_DELIVERY_ITEMS[categoryId] || [];
-      setItems(
-        fallbackItems.map((item, index) => ({
-          id: `${categoryId}-${index}`,
-          category_id: categoryId,
-          subcategory_id: null,
-          image_url: item.image_url,
-          label: item.label,
-          order_index: item.order_index,
-          created_at: "",
-          brand: null,
-          price: null,
-          description: null,
-          availability: true,
-          compatible_bikes: [],
-          instagram_reel_url: null,
-          before_image_url: null,
-          after_image_url: null,
-          tags: [],
-          search_keywords: [],
-          featured: false,
-          visibility: true,
-          additional_images: [],
-        }))
-      );
-      setError(null);
+      const mapped = fallbackItems.map((item, index) => ({
+        id: `${categoryId}-${index}`,
+        category_id: categoryId,
+        subcategory_id: null,
+        image_url: item.image_url,
+        label: item.label,
+        order_index: item.order_index,
+        created_at: "",
+        brand: null,
+        price: null,
+        description: null,
+        availability: true,
+        compatible_bikes: [],
+        instagram_reel_url: null,
+        before_image_url: null,
+        after_image_url: null,
+        tags: [],
+        search_keywords: [],
+        featured: false,
+        visibility: true,
+        additional_images: [],
+      }));
+      setItems(mapped);
+      setHasMore(false);
       setLoading(false);
       return;
     }
@@ -76,63 +80,109 @@ export function useDeliveryItems(
       return;
     }
 
-    let active = true;
+    if (isFetchingRef.current && !reset) return;
+    isFetchingRef.current = true;
 
-    const fetchItems = async () => {
+    if (reset) {
       setLoading(true);
-      try {
-        let query = supabase
-          .from("delivery_items")
-          .select("*")
-          .eq("category_id", categoryId)
-          .order("created_at", { ascending: false });
+      setPage(0);
+      setHasMore(true);
+    }
 
-        // Optional subcategory filter
-        if (subcategoryId) {
-          query = query.eq("subcategory_id", subcategoryId);
-        } else if (subcategoryId === null) {
-          // null means explicitly no subcategory filter — show all
-        }
+    try {
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
 
-        const { data, error: err } = await query;
+      // Select only the columns required for the product card
+      let query = supabase
+        .from("delivery_items")
+        .select("id, category_id, subcategory_id, image_url, label, compatible_bikes, visibility, order_index")
+        .eq("category_id", categoryId)
+        .order("order_index", { ascending: true })
+        .range(from, to);
 
-        if (!active) return;
-
-        if (err) {
-          setError(err.message);
-        } else {
-          setItems(data || []);
-        }
-      } catch (err) {
-        console.error("[useDeliveryItems] Fetch failed:", err);
-        if (active) setError("Failed to load items");
-      } finally {
-        if (active) setLoading(false);
+      if (subcategoryId) {
+        query = query.eq("subcategory_id", subcategoryId);
+      } else if (subcategoryId === null) {
+        query = query.is("subcategory_id", null);
       }
-    };
 
-    fetchItems();
+      const { data, error: err } = await query;
+
+      if (err) {
+        setError(err.message);
+        setHasMore(false);
+      } else if (data) {
+        const newItems = data.map((d) => ({
+          id: d.id,
+          category_id: d.category_id,
+          subcategory_id: d.subcategory_id,
+          image_url: d.image_url,
+          label: d.label,
+          order_index: d.order_index,
+          created_at: "",
+          brand: null,
+          price: null,
+          description: null,
+          availability: true,
+          compatible_bikes: d.compatible_bikes || [],
+          instagram_reel_url: null,
+          before_image_url: null,
+          after_image_url: null,
+          tags: [],
+          search_keywords: [],
+          featured: false,
+          visibility: d.visibility !== false,
+          additional_images: [],
+        }));
+
+        setItems((prev) => {
+          const next = reset ? newItems : [...prev, ...newItems];
+          return next;
+        });
+        setHasMore(newItems.length === PAGE_SIZE);
+        setPage(pageNum);
+      }
+    } catch (err) {
+      console.error("[useDeliveryItems] Fetch failed:", err);
+      setError("Failed to load items");
+      setHasMore(false);
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
+    }
+  }, [categoryId, subcategoryId, useFallback]);
+
+  // Reset & load page 0 when filters change
+  useEffect(() => {
+    fetchItems(0, true);
+  }, [categoryId, subcategoryId, fetchItems]);
+
+  // Real-time updates subscription
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase || useFallback || !categoryId) return;
 
     const channel = supabase
-      .channel(`delivery-items-${categoryId}`)
+      .channel(`delivery-items-${categoryId}-${subcategoryId || "all"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_items" },
-        (payload) => {
-          const newCategory = (payload.new as { category_id?: string })?.category_id;
-          const oldCategory = (payload.old as { category_id?: string })?.category_id;
-          if (newCategory === categoryId || oldCategory === categoryId) {
-            fetchItems();
-          }
+        () => {
+          fetchItems(0, true);
         }
       )
       .subscribe();
 
     return () => {
-      active = false;
       supabase.removeChannel(channel);
     };
-  }, [categoryId, subcategoryId, useFallback]);
+  }, [categoryId, subcategoryId, useFallback, fetchItems]);
 
-  return { items, loading, error };
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore && !isFetchingRef.current) {
+      fetchItems(page + 1, false);
+    }
+  }, [loading, hasMore, page, fetchItems]);
+
+  return { items, loading, error, hasMore, loadMore };
 }

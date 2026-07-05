@@ -1,8 +1,8 @@
-import bike1 from "@/assets/bike1.png";
-import bike2 from "@/assets/bike2.png";
-import bike3 from "@/assets/bike3.png";
-import bike4 from "@/assets/bike4.png";
-import bike5 from "@/assets/bike5.png";
+import bike1 from "@/assets/bike1.jpg";
+import bike2 from "@/assets/bike2.jpg";
+import bike3 from "@/assets/bike3.jpg";
+import bike4 from "@/assets/bike4.jpg";
+import bike5 from "@/assets/bike5.jpg";
 import helmets from "@/assets/helmets.jpeg";
 import tyres from "@/assets/tyres.jpeg";
 

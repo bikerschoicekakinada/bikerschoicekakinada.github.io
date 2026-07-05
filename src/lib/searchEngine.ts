@@ -13,7 +13,7 @@ export interface SearchSuggestion {
 }
 
 /**
- * Computes the Levenshtein edit distance between two strings.
+ * Computes the Levenshtein edit distance between two strings for typo tolerance.
  */
 export function getLevenshteinDistance(a: string, b: string): number {
   const matrix: number[][] = [];
@@ -39,7 +39,7 @@ export function getLevenshteinDistance(a: string, b: string): number {
 }
 
 /**
- * Checks if a query word matches a product word (with typo tolerance and abbreviations).
+ * Checks if a query word matches a product word (with typo tolerance).
  */
 function isWordMatch(qWord: string, pWord: string): { matches: boolean; score: number } {
   const qw = qWord.toLowerCase();
@@ -47,27 +47,20 @@ function isWordMatch(qWord: string, pWord: string): { matches: boolean; score: n
 
   // Exact Match
   if (qw === pw) {
-    return { matches: true, score: 100 };
+    return { matches: true, score: 200 };
   }
 
   // Prefix Match (e.g., "helm" -> "helmet")
   if (pw.startsWith(qw) && qw.length >= 3) {
-    return { matches: true, score: 70 };
+    return { matches: true, score: 120 };
   }
 
-  // Size Abbreviations Match (e.g. standalone "l" -> "large", "m" -> "medium", "s" -> "small")
-  if (qw === "l" && pw === "large") return { matches: true, score: 80 };
-  if (qw === "m" && pw === "medium") return { matches: true, score: 80 };
-  if (qw === "s" && pw === "small") return { matches: true, score: 80 };
-
   // Fuzzy Match (Typo Tolerance)
-  // Only allow typo tolerance for query words of length 3 or more
   if (qw.length >= 3) {
     const maxDistance = qw.length <= 4 ? 1 : 2;
     const distance = getLevenshteinDistance(qw, pw);
     if (distance <= maxDistance) {
-      // Closer distance gets higher score
-      return { matches: true, score: 50 - distance * 15 };
+      return { matches: true, score: 80 - distance * 25 };
     }
   }
 
@@ -92,7 +85,7 @@ export function performSmartSearch(
   const results: SearchResult[] = [];
 
   for (const item of items) {
-    // If scoped to a specific category, filter out other items first
+    // Category scope check
     if (categoryIdScope && item.category_id !== categoryIdScope) {
       continue;
     }
@@ -105,61 +98,37 @@ export function performSmartSearch(
 
     const itemLabel = item.label.toLowerCase();
     const itemWords = itemLabel.split(/[ \-_/]/).filter(Boolean);
-    const brand = (item.brand || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
-    
     const compatibleBikes = (item.compatible_bikes || []).map(b => b.toLowerCase());
-    const tags = (item.tags || []).map(t => t.toLowerCase());
-    const searchKeywords = (item.search_keywords || []).map(k => k.toLowerCase());
+    const brand = (item.brand || "").toLowerCase();
 
     let matchCount = 0;
     let totalScore = 0;
 
-    // Check if the entire query matches the label exactly
+    // 1. Check Product Name Exact Matches (Highest Priority)
     if (itemLabel.includes(trimmed)) {
-      totalScore += 250;
+      totalScore += 500;
       if (itemLabel === trimmed) {
         totalScore += 1000;
       }
     }
 
-    // Check query words
+    // Check individual query words
     for (const qWord of queryWords) {
       let wordMatched = false;
       let highestWordScore = 0;
 
-      // 1. Check Custom Admin Keywords (Highest score)
-      for (const keyword of searchKeywords) {
-        if (keyword === qWord) {
-          wordMatched = true;
-          highestWordScore = Math.max(highestWordScore, 180);
-        } else if (keyword.includes(qWord)) {
-          wordMatched = true;
-          highestWordScore = Math.max(highestWordScore, 90);
-        }
-      }
-
-      // 2. Check Brand Match
-      if (brand === qWord) {
-        wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 150);
-      } else if (brand.includes(qWord)) {
-        wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 75);
-      }
-
-      // 3. Check Compatible Bike Models Match
+      // 2. Check Bike Compatibility Tags (Priority 2)
       for (const bike of compatibleBikes) {
         if (bike === qWord) {
           wordMatched = true;
-          highestWordScore = Math.max(highestWordScore, 120);
+          highestWordScore = Math.max(highestWordScore, 400);
         } else if (bike.includes(qWord)) {
           wordMatched = true;
-          highestWordScore = Math.max(highestWordScore, 60);
+          highestWordScore = Math.max(highestWordScore, 200);
         }
       }
 
-      // 4. Check Product Label Word Match
+      // 3. Check Product Name Words (Priority 1 Partials)
       for (const pWord of itemWords) {
         const { matches, score } = isWordMatch(qWord, pWord);
         if (matches) {
@@ -168,30 +137,22 @@ export function performSmartSearch(
         }
       }
 
-      // 5. Check Subcategory Match
+      // 4. Check Subcategory Match (Priority 3)
       if (subcategoryName.includes(qWord)) {
         wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 50);
+        highestWordScore = Math.max(highestWordScore, 100);
       }
 
-      // 6. Check Category Match
+      // 5. Check Category Match (Priority 4)
       if (categoryName.includes(qWord)) {
         wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 30);
+        highestWordScore = Math.max(highestWordScore, 80);
       }
 
-      // 7. Check Tags Match
-      for (const tag of tags) {
-        if (tag.includes(qWord)) {
-          wordMatched = true;
-          highestWordScore = Math.max(highestWordScore, 30);
-        }
-      }
-
-      // 8. Check Description Match
-      if (description.includes(qWord)) {
+      // 6. Check Brand Match (Fallback compatibility)
+      if (brand && (brand === qWord || brand.includes(qWord))) {
         wordMatched = true;
-        highestWordScore = Math.max(highestWordScore, 10);
+        highestWordScore = Math.max(highestWordScore, 50);
       }
 
       if (wordMatched) {
@@ -200,7 +161,7 @@ export function performSmartSearch(
       }
     }
 
-    // All query words must match somewhere (Fuzzy or exact)
+    // All query words must match somewhere
     if (matchCount === queryWords.length) {
       results.push({ item, score: totalScore });
     }
@@ -231,13 +192,12 @@ export function generateSuggestions(
     }
   });
 
-  // 2. Suggest matching product labels (limit to top matches)
+  // 2. Suggest matching product labels
   const queryWords = trimmed.split(" ");
   items.forEach((item) => {
     const label = item.label;
     const labelLower = label.toLowerCase();
     
-    // If it matches all query words as substrings
     const matchesAll = queryWords.every(word => labelLower.includes(word));
     if (matchesAll) {
       suggestionsMap.set(`item:${label}`, {
@@ -245,16 +205,7 @@ export function generateSuggestions(
         type: "product",
       });
     }
-
-    // Suggest matching brands
-    if (item.brand && item.brand.toLowerCase().includes(trimmed)) {
-      suggestionsMap.set(`brand:${item.brand}`, {
-        text: item.brand,
-        type: "brand",
-      });
-    }
   });
 
-  // Return maximum 8 suggestions
-  return Array.from(suggestionsMap.values()).slice(0, 8);
+  return Array.from(suggestionsMap.values()).slice(0, 5);
 }

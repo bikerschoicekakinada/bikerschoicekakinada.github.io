@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { DEFAULT_GALLERY_CATEGORIES, DEFAULT_GALLERY_IMAGES } from "@/lib/mediaDefaults";
 import { useNavigate } from "react-router-dom";
+import OptimizedImage from "@/components/OptimizedImage";
 
 type DbGalleryImage = {
   src: string;
@@ -47,16 +48,19 @@ const GallerySection = () => {
 
     const fetchImages = async () => {
       try {
-        const { data, error } = await supabase.from("gallery").select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase
+          .from("gallery")
+          .select("id, image_url, category, before_image_url, comparison_enabled, instagram_post_url")
+          .order("created_at", { ascending: false });
         if (!error && active) {
           const mapped: DbGalleryImage[] = (data || []).map((d) => ({
             src: d.image_url,
             cat: d.category,
             before_image_url: d.before_image_url ?? null,
-            before_image_alt: d.before_image_alt ?? null,
-            after_image_alt: d.after_image_alt ?? null,
-            before_label: d.before_label ?? null,
-            after_label: d.after_label ?? null,
+            before_image_alt: null,
+            after_image_alt: null,
+            before_label: null,
+            after_label: null,
             comparison_enabled: d.comparison_enabled ?? false,
             instagram_post_url: d.instagram_post_url ?? null,
           }));
@@ -208,11 +212,11 @@ const GallerySection = () => {
               onClick={() => handleImageClick(displayedIndices[index])}
               className="relative rounded-xl overflow-hidden cursor-pointer group border border-border/50 hover:border-primary transition-all duration-300 shadow aspect-[4/5]"
             >
-              <img
+              <OptimizedImage
                 src={item.src}
                 alt={`${item.cat} modification`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
+                className="group-hover:scale-105 transition-transform duration-500"
+                widthLimit={600}
               />
 
               {/* Badges overlay */}

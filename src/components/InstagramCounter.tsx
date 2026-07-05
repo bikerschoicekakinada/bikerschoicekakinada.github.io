@@ -3,9 +3,8 @@ import { useInstagramFollowers } from "@/hooks/useInstagramFollowers";
 const InstagramCounter = () => {
   const { count, loading, ref } = useInstagramFollowers();
 
-  if (loading) return null;
-
-  const formatted = count.toLocaleString("en-IN");
+  // Show a static fallback count immediately to prevent visual layout shift or blank hole
+  const formatted = (loading ? 7375 : count).toLocaleString("en-IN");
 
   return (
     <span ref={ref} className="tabular-nums">{formatted}+</span>
