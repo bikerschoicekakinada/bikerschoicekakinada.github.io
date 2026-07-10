@@ -1,7 +1,7 @@
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Phone, Instagram, MapPin, Truck } from "lucide-react";
+import { MessageCircle, Phone, Instagram, MapPin, Truck, Compass } from "lucide-react";
 import logo from "@/assets/logo.jpeg";
 import InstagramCounter from "./InstagramCounter";
 
@@ -87,8 +87,19 @@ const HeroSection = () => {
           target="_blank"
           rel="noopener noreferrer"
           whileHover={{ scale: 1.03 }}
-          className="inline-flex items-center gap-2 bg-card border border-border px-5 py-3 rounded-full text-sm font-heading font-semibold text-foreground hover:border-primary hover:text-primary transition-colors shadow" href="https://maps.app.goo.gl/fL4Lk5HGVNdVyu2d8">
+          className="inline-flex items-center gap-2 bg-card border border-border px-5 py-3 rounded-full text-sm font-heading font-semibold text-foreground hover:border-primary hover:text-primary transition-colors shadow mb-6" href="https://maps.app.goo.gl/fL4Lk5HGVNdVyu2d8">
           <MapPin size={16} className="text-secondary" /> Open Google Maps Directions
+        </motion.a>
+
+        {/* Design Explorer Badge */}
+        <motion.a
+          href="https://bikerschoicekakinada-designexplorer.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          whileHover={{ scale: 1.03 }}
+          className="inline-flex items-center gap-2 bg-surface border px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-primary transition-colors shadow font-semibold border-primary">
+          <Compass size={14} className="text-primary" />
+          Explore More Designs
         </motion.a>
       </motion.div>
 
